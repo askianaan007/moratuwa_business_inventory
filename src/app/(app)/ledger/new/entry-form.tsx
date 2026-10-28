@@ -1,30 +1,110 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { ENTRY_TYPES, entryTypeBadge, formatLKR, todayISO } from "@/lib/format";
 import type { Category, Department, LedgerEntryDetail, LedgerEntryType, Location } from "@/lib/types";
 
-export function EntryForm({
-  departments,
-  locations,
-  categories,
-  initialType,
-  initialCategoryId,
-}: {
+// ─── Remembered values ──────────────────────────────────────────────────
+
+/** Fields carried over from the last saved entry, so a run of similar rows is quick to type. */
+interface Remembered {
+  departmentId?: string;
+  entryType?: LedgerEntryType;
+  categoryId?: string;
+  entryDate?: string;
+  brand?: string;
+  unitPrice?: string;
+  remark?: string;
+  locationId?: string;
+}
+
+const STORAGE_KEY = "labledger:last-entry";
+
+function readRemembered(raw: string | null): Remembered {
+  try {
+    return raw ? (JSON.parse(raw) as Remembered) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRemembered(values: Remembered) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+  } catch {
+    // Storage unavailable (private mode, quota): just don't remember.
+  }
+}
+
+const noSubscribe = () => () => {};
+const getStored = () => {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+type EntryFormProps = {
   departments: Department[];
   locations: Location[];
   categories: Category[];
-  initialType: LedgerEntryType;
-  initialCategoryId: string;
-}) {
+  /** From the URL (opened from a category ledger or type tab); wins over remembered values. */
+  initialType?: LedgerEntryType;
+  initialCategoryId?: string;
+};
+
+/**
+ * Reads the remembered values (browser only) and mounts the form with them.
+ * The server render has none; the form remounts once they are known.
+ */
+export function EntryForm(props: EntryFormProps) {
+  const raw = useSyncExternalStore(noSubscribe, getStored, () => null);
+  const saved = readRemembered(raw);
+  const { departments, locations, categories } = props;
+
+  // Drop remembered references that no longer exist (deactivated category, removed location…).
+  const departmentId = departments.some((d) => d.id === saved.departmentId)
+    ? saved.departmentId!
+    : departments.length === 1
+      ? departments[0]!.id
+      : "";
+  const defaults: Required<Remembered> = {
+    departmentId,
+    entryType: props.initialType ?? (ENTRY_TYPES.includes(saved.entryType!) ? saved.entryType! : "RECEIPT"),
+    categoryId: props.initialCategoryId ?? (categories.some((c) => c.id === saved.categoryId) ? saved.categoryId! : ""),
+    entryDate: saved.entryDate ?? todayISO(),
+    brand: saved.brand ?? "",
+    unitPrice: saved.unitPrice ?? "",
+    remark: saved.remark ?? "",
+    locationId: locations.some((l) => l.id === saved.locationId && (!l.departmentId || l.departmentId === departmentId))
+      ? saved.locationId!
+      : "",
+  };
+
+  return <EntryFormFields key={raw ?? "none"} {...props} defaults={defaults} />;
+}
+
+// ─── Form ───────────────────────────────────────────────────────────────
+
+function EntryFormFields({
+  departments,
+  locations,
+  categories,
+  defaults,
+}: EntryFormProps & { defaults: Required<Remembered> }) {
   const router = useRouter();
-  const [departmentId, setDepartmentId] = useState(departments.length === 1 ? departments[0]!.id : "");
-  const [entryType, setEntryType] = useState<LedgerEntryType>(initialType);
-  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [departmentId, setDepartmentId] = useState(defaults.departmentId);
+  const [entryType, setEntryType] = useState<LedgerEntryType>(defaults.entryType);
+  const [categoryId, setCategoryId] = useState(defaults.categoryId);
+  const [entryDate, setEntryDate] = useState(defaults.entryDate);
+  const [brand, setBrand] = useState(defaults.brand);
   const [quantity, setQuantity] = useState("1");
-  const [unitPrice, setUnitPrice] = useState("");
+  const [unitPrice, setUnitPrice] = useState(defaults.unitPrice);
+  const [remark, setRemark] = useState(defaults.remark);
+  const [locationId, setLocationId] = useState(defaults.locationId);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -48,21 +128,21 @@ export function EntryForm({
           departmentId: departmentId || undefined,
           entryType,
           categoryId: categoryId || undefined,
-          entryDate: text("entryDate"),
+          entryDate: entryDate || undefined,
           ...(isReceipt
             ? { receiptNo: text("receiptNo"), sinNo: text("sinNo"), sinDate: text("sinDate") }
             : { refNo: text("refNo") }),
           description: text("description"),
-          brand: text("brand"),
+          brand: brand.trim() || undefined,
           modelNo: text("modelNo"),
           serialNo: text("serialNo"),
           itemCode: text("itemCode"),
           quantity: Number(quantity),
           unitPrice,
-          remark: text("remark"),
+          remark: remark.trim() || undefined,
           hodSigned: form.get("hodSigned") === "on",
           ...(isReceipt && {
-            locationId: text("locationId"),
+            locationId: locationId || undefined,
             isBulk: form.get("isBulk") === "on",
             serialNos: String(form.get("serialNos") ?? "")
               .split("\n")
@@ -71,6 +151,7 @@ export function EntryForm({
           }),
         },
       });
+      saveRemembered({ departmentId, entryType, categoryId, entryDate, brand, unitPrice, remark, locationId });
       router.replace(`/ledger/${data.id}`);
       router.refresh();
     } catch (err) {
@@ -98,7 +179,10 @@ export function EntryForm({
           <Select
             label="Department"
             value={departmentId}
-            onChange={setDepartmentId}
+            onChange={(id) => {
+              setDepartmentId(id);
+              setLocationId(""); // locations belong to a department
+            }}
             error={errors.departmentId}
             options={departments.map((d) => ({ value: d.id, label: `${d.code} — ${d.name}` }))}
             required
@@ -136,7 +220,15 @@ export function EntryForm({
           <>
             <div className="grid grid-cols-2 gap-3">
               <Input label="No" name="receiptNo" placeholder="Receipt no." error={errors.receiptNo} />
-              <Input label="Date" name="entryDate" type="date" defaultValue={todayISO()} error={errors.entryDate} required />
+              <Input
+                label="Date"
+                name="entryDate"
+                type="date"
+                value={entryDate}
+                onChange={setEntryDate}
+                error={errors.entryDate}
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Input label="SIN No" name="sinNo" placeholder="Store Issue Note" error={errors.sinNo} />
@@ -145,7 +237,15 @@ export function EntryForm({
           </>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Date" name="entryDate" type="date" defaultValue={todayISO()} error={errors.entryDate} required />
+            <Input
+              label="Date"
+              name="entryDate"
+              type="date"
+              value={entryDate}
+              onChange={setEntryDate}
+              error={errors.entryDate}
+              required
+            />
             <Input label="Ref. No" name="refNo" placeholder="Transfer / BOS ref." error={errors.refNo} />
           </div>
         )}
@@ -157,7 +257,7 @@ export function EntryForm({
           required
         />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Brand" name="brand" error={errors.brand} />
+          <Input label="Brand" name="brand" value={brand} onChange={setBrand} error={errors.brand} />
           <Input label="Model No" name="modelNo" error={errors.modelNo} />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -191,7 +291,14 @@ export function EntryForm({
           <span className="text-sm opacity-80">Value</span>
           <span className="text-xl font-bold">{formatLKR(value)}</span>
         </div>
-        <Textarea label="Remark" name="remark" rows={2} error={errors.remark} />
+        <Textarea
+          label="Remark"
+          name="remark"
+          rows={2}
+          value={remark}
+          onChange={(e) => setRemark(e.target.value)}
+          error={errors.remark}
+        />
         <label className="flex cursor-pointer items-center gap-3 py-1">
           <input type="checkbox" name="hodSigned" className="checkbox checkbox-primary" />
           <span className="font-medium">Signed by HOD in the book</span>
@@ -202,7 +309,8 @@ export function EntryForm({
         <Section title="Items & location">
           <Select
             label="Location"
-            name="locationId"
+            value={locationId}
+            onChange={setLocationId}
             options={deptLocations.map((l) => ({ value: l.id, label: `${l.code} — ${l.name}` }))}
             error={errors.locationId}
           />

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CardSkeleton, PageHeader } from "@/components/ui";
 import { apiGet } from "@/lib/api-server";
 import { ENTRY_TYPES } from "@/lib/format";
-import type { CategorySummary, Department, LedgerEntryType, Location } from "@/lib/types";
+import type { CategorySummary, Department, Location } from "@/lib/types";
 import { EntryForm } from "./entry-form";
 
 export const metadata: Metadata = { title: "New entry" };
@@ -27,16 +27,16 @@ async function FormLoader({ searchParams }: { searchParams: Promise<Record<strin
     apiGet<{ data: CategorySummary[] }>("/categories"),
   ]);
 
-  // Opened from a category ledger or type filter: preselect them.
-  const type = ENTRY_TYPES.find((t) => t === search.entryType) ?? "RECEIPT";
-  const categoryId = categories.data.some((c) => c.id === search.categoryId) ? (search.categoryId as string) : "";
+  // Opened from a category ledger or type filter: preselect them (otherwise the form uses the last entry's).
+  const type = ENTRY_TYPES.find((t) => t === search.entryType);
+  const categoryId = categories.data.find((c) => c.id === search.categoryId)?.id;
 
   return (
     <EntryForm
       departments={departments.data}
       locations={locations.data}
       categories={categories.data}
-      initialType={type as LedgerEntryType}
+      initialType={type}
       initialCategoryId={categoryId}
     />
   );
