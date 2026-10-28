@@ -94,3 +94,19 @@
 .pb-dock {
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
+
+/* Gentle fade-up when a tab or panel appears. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.animate-in {
+  animation: fade-up 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation: none;
+  }
+}

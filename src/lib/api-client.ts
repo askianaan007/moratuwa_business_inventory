@@ -6,12 +6,14 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly fieldErrors: Record<string, string>;
+  readonly details: NonNullable<ApiErrorBody["error"]["details"]>;
 
   constructor(status: number, body: ApiErrorBody | null) {
     super(body?.error.message ?? "Something went wrong. Please try again.");
     this.status = status;
     this.code = body?.error.code ?? "UNKNOWN";
-    this.fieldErrors = Object.fromEntries((body?.error.details ?? []).map((d) => [d.path, d.message]));
+    this.details = body?.error.details ?? [];
+    this.fieldErrors = Object.fromEntries(this.details.map((d) => [d.path, d.message]));
   }
 }
 
