@@ -266,7 +266,7 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
                         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
                           {row.stations.map((s) => (
                             <li key={s.key}>
-                              <StationCard station={s} onOpen={() => setOpen(s.key)} />
+                              <StationCard station={s} onOpen={() => setOpen(s.key)} onAllWorking={editable ? () => markWorking(s.checks) : undefined} />
                             </li>
                           ))}
                         </ul>
@@ -330,36 +330,45 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
   );
 }
 
-function StationCard({ station, onOpen }: { station: Station; onOpen: () => void }) {
+function StationCard({ station, onOpen, onAllWorking }: { station: Station; onOpen: () => void; onAllWorking?: () => void }) {
   const status = statusOf(station);
   const meta = checkStatus[status];
   const done = station.checks.filter((c) => c.status !== "NOT_CHECKED").length;
+  // Quick tick: marks every unchecked item on this PC working without opening it.
+  const canTick = onAllWorking && station.checks.some((c) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart);
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`flex h-full w-full flex-col gap-1 rounded-box border-2 bg-base-100 p-2.5 text-left transition-[transform,border-color] duration-150 active:scale-[0.98] ${
-        status === "NOT_CHECKED" ? "border-base-300" : status === "WORKING" ? "border-success/60" : FAULTS.has(status) ? "border-error/70" : "border-base-content/30"
-      }`}
-    >
-      <span className="flex items-center gap-1">
-        <span className="min-w-0 flex-1 truncate font-semibold">{station.label}</span>
-        <span className={`badge badge-sm ${meta.badge}`} aria-label={meta.label}>
-          {meta.symbol}
-        </span>
-      </span>
-      <span className="font-mono text-[11px] text-base-content/50">{station.positionCode ?? "—"}</span>
-      <span className="flex flex-wrap gap-0.5" aria-hidden>
-        {station.checks.map((c) => (
-          <span key={c.id} title={`${c.itemCode}: ${checkStatus[c.status].label}`} className={`badge badge-xs ${checkStatus[c.status].badge}`}>
-            {c.typeCode === "SEAT" ? "TBL" : c.typeCode}
+    <div className="relative h-full">
+      <button
+        type="button"
+        onClick={onOpen}
+        className={`flex h-full w-full flex-col gap-1 rounded-box border-2 bg-base-100 p-2.5 text-left transition-[transform,border-color] duration-150 active:scale-[0.98] ${
+          status === "NOT_CHECKED" ? "border-base-300" : status === "WORKING" ? "border-success/60" : FAULTS.has(status) ? "border-error/70" : "border-base-content/30"
+        }`}
+      >
+        <span className="flex items-center gap-1">
+          <span className="min-w-0 flex-1 truncate font-semibold">{station.label}</span>
+          <span className={`badge badge-sm ${meta.badge}`} aria-label={meta.label}>
+            {meta.symbol}
           </span>
-        ))}
-      </span>
-      <span className="text-[11px] text-base-content/60 tabular-nums">
-        {done}/{station.checks.length} checked
-      </span>
-    </button>
+        </span>
+        <span className="font-mono text-[11px] text-base-content/50">{station.positionCode ?? "—"}</span>
+        <span className="flex flex-wrap gap-0.5" aria-hidden>
+          {station.checks.map((c) => (
+            <span key={c.id} title={`${c.itemCode}: ${checkStatus[c.status].label}`} className={`badge badge-xs ${checkStatus[c.status].badge}`}>
+              {c.typeCode === "SEAT" ? "TBL" : c.typeCode}
+            </span>
+          ))}
+        </span>
+        <span className="text-[11px] text-base-content/60 tabular-nums">
+          {done}/{station.checks.length} checked
+        </span>
+      </button>
+      {canTick && (
+        <button type="button" onClick={onAllWorking} className="btn btn-success btn-xs absolute right-2 bottom-2" aria-label={`Mark all items on ${station.label} working`} title="All working">
+          ✓ All
+        </button>
+      )}
+    </div>
   );
 }
 
