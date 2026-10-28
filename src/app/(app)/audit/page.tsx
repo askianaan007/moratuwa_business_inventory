@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { Badge, CardSkeleton, EmptyState } from "@/components/ui";
@@ -26,6 +27,8 @@ export default function MonthlyAuditPage({ searchParams }: PageProps<"/audit">) 
 
 async function Overview({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = (await searchParams).period;
+  // currentPeriod() reads the clock, so opt out of prerendering first.
+  await connection();
   const period = typeof raw === "string" && /^\d{4}-\d{2}$/.test(raw) ? raw : currentPeriod();
   const [{ data }, { data: me }] = await Promise.all([
     apiGet<{ data: AuditOverview }>(`/lab-audits/overview?period=${period}`),
