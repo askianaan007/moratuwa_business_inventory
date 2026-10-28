@@ -31,6 +31,15 @@ export type SaveState = "saved" | "pending" | "saving" | "offline" | "error";
 const BATCH = 50;
 const DEBOUNCE_MS = 600;
 const storageKey = (auditId: string) => `labledger:audit-outbox:${auditId}`;
+
+/** Drops unsent edits, e.g. after the audit was reset or deleted and its checks no longer exist. */
+export function clearAuditOutbox(auditId: string) {
+  try {
+    localStorage.removeItem(storageKey(auditId));
+  } catch {
+    // Storage may be unavailable; nothing to clear then.
+  }
+}
 const editFields = (c: CheckEdit): CheckEdit => ({
   status: c.status,
   faultReasonId: c.faultReasonId,

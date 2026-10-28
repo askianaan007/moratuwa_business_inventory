@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { DownloadIcon, FileIcon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { api, ApiError } from "@/lib/api-client";
+import { clearAuditOutbox } from "@/lib/audit-outbox";
 import { formatDate, todayISO } from "@/lib/format";
 import { auditStatusBadge, checkStatus } from "@/lib/lab-status";
 import { useAction } from "@/lib/use-action";
@@ -162,6 +163,8 @@ export function AuditPanels({
 
       {user.role === "ADMIN" && (audit.status === "SUBMITTED" || audit.status === "APPROVED") && <ReopenPanel audit={audit} />}
 
+      {(user.role === "ADMIN" || user.role === "HOD") && <ResetDeletePanel audit={audit} isAdmin={user.role === "ADMIN"} />}
+
       {audit.transitions.length > 0 && (
         <section className="px-1">
           <h2 className="mb-2 text-sm font-semibold text-base-content/70">History</h2>
@@ -317,6 +320,76 @@ function ReopenPanel({ audit }: { audit: LabAuditDetail }) {
     <button type="button" className="btn btn-ghost btn-sm self-start" onClick={() => setOpen(true)}>
       Reopen (admin)
     </button>
+  );
+}
+
+/** Start this room's month again from scratch, or remove the audit entirely. */
+function ResetDeletePanel({ audit, isAdmin }: { audit: LabAuditDetail; isAdmin: boolean }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<"reset" | "delete" | null>(null);
+  const { pending, error, run, setError } = useAction();
+  const canReset = audit.status !== "APPROVED";
+  const canDelete = audit.status !== "APPROVED" || isAdmin;
+  if (!canReset && !canDelete) return null;
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const reason = text(new FormData(event.currentTarget), "reason");
+    if (mode === "reset") {
+      const res = await run(() => api(`/lab-audits/${audit.id}/reset`, { method: "POST", body: { expectedVersion: audit.version, reason } }));
+      if (!res) return;
+      clearAuditOutbox(audit.id);
+      // Full reload so the checklist starts from the new, unchecked items.
+      window.location.reload();
+    } else {
+      const res = await run(() => api(`/lab-audits/${audit.id}`, { method: "DELETE", body: { reason } }));
+      if (!res) return;
+      clearAuditOutbox(audit.id);
+      router.replace(`/audit?period=${audit.period.slice(0, 7)}`);
+      router.refresh();
+    }
+  }
+
+  const choose = (next: "reset" | "delete" | null) => {
+    setError(null);
+    setMode(next);
+  };
+
+  if (!mode) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {canReset && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => choose("reset")}>
+            Reset audit
+          </button>
+        )}
+        {canDelete && (
+          <button type="button" className="btn btn-ghost btn-sm text-error" onClick={() => choose("delete")}>
+            Delete audit
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-2 rounded-box border border-error/40 p-4">
+      <p className="text-sm">
+        {mode === "reset"
+          ? "Every item goes back to not checked and the list is rebuilt from the room as it is now. Remarks and the completion date are cleared. This cannot be undone."
+          : `The ${audit.reference} audit and everything recorded in it will be removed, so this room's month can be started again. This cannot be undone.`}
+      </p>
+      <input name="reason" required minLength={3} placeholder="Reason" aria-label="Reason" className="input w-full" />
+      {error && <p className="text-sm text-error">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" className="btn btn-error flex-1" disabled={pending}>
+          {mode === "reset" ? "Reset to the beginning" : "Delete audit"}
+        </button>
+        <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => choose(null)}>
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
