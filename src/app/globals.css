@@ -94,6 +94,12 @@
 .pb-dock {
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
+/* Desktop uses the sidebar instead of the dock. */
+@media (width >= 64rem) {
+  .pb-dock {
+    padding-bottom: 0;
+  }
+}
 
 /* Gentle fade-up when a tab or panel appears. */
 @keyframes fade-up {

@@ -79,7 +79,8 @@ async function LedgerResults({ searchParams }: { searchParams: Promise<Search> }
         }
       />
 
-      <form role="search" className="join w-full">
+      <div className="flex flex-col gap-3 lg:flex-row">
+      <form role="search" className="join w-full lg:flex-[2]">
         <label className="input join-item w-full">
           <SearchIcon className="size-5 opacity-50" />
           <input
@@ -96,7 +97,7 @@ async function LedgerResults({ searchParams }: { searchParams: Promise<Search> }
         <button className="btn btn-secondary join-item">Search</button>
       </form>
 
-      <form className="join w-full" aria-label="Filter by category">
+      <form className="join w-full lg:flex-1" aria-label="Filter by category">
         <select name="categoryId" defaultValue={filters.categoryId ?? ""} className="select join-item w-full">
           <option value="">All categories</option>
           {categories.map((c) => (
@@ -109,21 +110,23 @@ async function LedgerResults({ searchParams }: { searchParams: Promise<Search> }
         {filters.entryType && <input type="hidden" name="entryType" value={filters.entryType} />}
         <button className="btn join-item">Show</button>
       </form>
+      </div>
 
-      <div role="tablist" className="tabs tabs-box tabs-sm w-full">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div role="tablist" className="tabs tabs-box tabs-sm w-full lg:w-auto">
         {[undefined, ...ENTRY_TYPES].map((type) => (
           <Link
             key={type ?? "ALL"}
             role="tab"
             href={`/ledger${toQuery({ q: filters.q, categoryId: filters.categoryId, entryType: type })}`}
-            className={`tab flex-1 ${filters.entryType === type ? "tab-active" : ""}`}
+            className={`tab flex-1 lg:flex-none lg:px-4 ${filters.entryType === type ? "tab-active" : ""}`}
           >
             {type ? `${entryTypeBadge[type].label}s` : "All"}
           </Link>
         ))}
       </div>
 
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:ml-auto lg:px-0 lg:pb-0">
         {FILTERS.map((filter) => {
           const params = { bookStatus: undefined, approvalStatus: undefined, ...filter.params } as Record<string, string | undefined>;
           const active = params.bookStatus === filters.bookStatus && params.approvalStatus === filters.approvalStatus;
@@ -138,18 +141,20 @@ async function LedgerResults({ searchParams }: { searchParams: Promise<Search> }
           );
         })}
       </div>
+      </div>
 
       <p className="text-sm text-base-content/60">{meta.total} entries</p>
 
       {data.length === 0 ? (
         <EmptyState title="No entries found">Try a different search or filter.</EmptyState>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <>
+        <ul className="flex flex-col gap-2 lg:hidden">
           {data.map((entry) => (
             <li key={entry.id}>
               <Link
                 href={`/ledger/${entry.id}`}
-                className="block rounded-box border border-base-300 bg-base-100 p-4 active:bg-base-200"
+                className="block rounded-box border border-base-300 bg-base-100 p-4 hover:bg-base-200/50 active:bg-base-200"
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-semibold">{entry.description}</p>
@@ -179,6 +184,50 @@ async function LedgerResults({ searchParams }: { searchParams: Promise<Search> }
             </li>
           ))}
         </ul>
+
+        <div className="hidden overflow-x-auto rounded-box border border-base-300 bg-base-100 lg:block">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>No / Ref.</th>
+                <th className="text-right">Qty</th>
+                <th className="text-right">Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((entry) => (
+                <tr key={entry.id} className="relative hover:bg-base-200/50">
+                  <td className="whitespace-nowrap text-base-content/70">{formatDate(entry.entryDate)}</td>
+                  <td className="max-w-80">
+                    <Link href={`/ledger/${entry.id}`} className="font-semibold after:absolute after:inset-0">
+                      {entry.description}
+                    </Link>
+                    <span className="block truncate text-sm text-base-content/60">
+                      {[entry.brand, entry.modelNo, entry.itemCode].filter(Boolean).join(" · ") || "—"}
+                    </span>
+                  </td>
+                  <td>{entry.category?.name ?? "—"}</td>
+                  <td className="font-mono text-sm">{entry.receiptNo ?? entry.refNo ?? "—"}</td>
+                  <td className="text-right tabular-nums">{entry.quantity}</td>
+                  <td className="text-right font-semibold whitespace-nowrap tabular-nums">{formatLKR(entry.value)}</td>
+                  <td>
+                    <span className="flex flex-wrap gap-1">
+                      <Badge className={entryTypeBadge[entry.entryType].className}>{entryTypeBadge[entry.entryType].label}</Badge>
+                      {entry.hodSigned && <Badge className="badge-success badge-outline">HOD signed</Badge>}
+                      <Badge className={bookStatusBadge[entry.bookStatus].className}>{bookStatusBadge[entry.bookStatus].label}</Badge>
+                      <Badge className={approvalBadge[entry.approvalStatus].className}>{approvalBadge[entry.approvalStatus].label}</Badge>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        </>
       )}
 
       {meta.totalPages > 1 && (

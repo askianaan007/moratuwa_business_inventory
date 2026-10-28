@@ -29,19 +29,25 @@ async function CategoryList() {
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      {isAdmin && <AddCategoryForm />}
+    <div
+      className={`flex flex-col gap-3 ${isAdmin ? "lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6" : ""}`}
+    >
+      {isAdmin && (
+        <div className="lg:sticky lg:top-8 lg:order-last">
+          <AddCategoryForm />
+        </div>
+      )}
 
       {categories.length === 0 ? (
         <EmptyState title="No categories yet">{isAdmin ? "Add the first one above." : "Ask an admin to add categories."}</EmptyState>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className={`grid gap-2 lg:gap-3 ${isAdmin ? "xl:grid-cols-2" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
           {categories.map((category) => (
             <li
               key={category.id}
-              className={`rounded-box border border-base-300 bg-base-100 ${category.isActive ? "" : "opacity-60"}`}
+              className={`flex flex-col overflow-hidden rounded-box border border-base-300 bg-base-100 ${category.isActive ? "" : "opacity-60"}`}
             >
-              <Link href={`/ledger?categoryId=${category.id}`} className="flex items-center gap-3 p-4 active:bg-base-200">
+              <Link href={`/ledger?categoryId=${category.id}`} className="flex flex-1 items-center gap-3 p-4 hover:bg-base-200/50 active:bg-base-200">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 font-semibold">
                     {category.name}

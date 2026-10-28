@@ -13,14 +13,14 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-center gap-2">
+    <div className="mb-4 flex items-center gap-2 lg:mb-6">
       {backHref && (
         <Link href={backHref} className="btn btn-ghost btn-circle -ml-2" aria-label="Back">
           <ChevronLeftIcon />
         </Link>
       )}
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="truncate text-2xl font-bold tracking-tight lg:text-3xl">{title}</h1>
         {subtitle && <p className="text-sm text-base-content/70">{subtitle}</p>}
       </div>
       {action}

@@ -30,14 +30,18 @@ async function RoomList() {
 
   return (
     <div className="flex flex-col gap-3">
-      {canConfigure && <NewRoomForm locations={locations.filter((l) => !roomIds.has(l.id))} departments={me.user.departmentId ? [] : departments} />}
+      {canConfigure && (
+        <div className="flex flex-col sm:items-end">
+          <NewRoomForm locations={locations.filter((l) => !roomIds.has(l.id))} departments={me.user.departmentId ? [] : departments} />
+        </div>
+      )}
       {rooms.length === 0 ? (
         <EmptyState title="No labs or classrooms yet">{canConfigure ? "Add one above." : "Ask an admin or HOD to add rooms."}</EmptyState>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="grid gap-2 lg:grid-cols-2 lg:gap-3 xl:grid-cols-3">
           {rooms.map((room) => (
             <li key={room.id}>
-              <Link href={`/audit/rooms/${room.id}`} className="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-4 transition-colors active:bg-base-200">
+              <Link href={`/audit/rooms/${room.id}`} className="flex h-full items-center gap-3 rounded-box border border-base-300 bg-base-100 p-4 transition-colors hover:bg-base-200/50 active:bg-base-200">
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     {room.name}

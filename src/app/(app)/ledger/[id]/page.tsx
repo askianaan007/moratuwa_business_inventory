@@ -48,8 +48,8 @@ async function EntryDetail({ params }: { params: Promise<{ id: string }> }) {
         </Badge>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <section className="rounded-box border border-base-300 bg-base-100 p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-6">
+        <section className="rounded-box border border-base-300 bg-base-100 p-4 lg:p-5">
           <dl>
             <Field label="Category">
               {entry.category && (
@@ -87,6 +87,7 @@ async function EntryDetail({ params }: { params: Promise<{ id: string }> }) {
           </dl>
         </section>
 
+        <div className="flex flex-col gap-4">
         <EntryActions entry={entry} user={me.user} />
 
         {entry.items.length > 0 && (
@@ -97,7 +98,7 @@ async function EntryDetail({ params }: { params: Promise<{ id: string }> }) {
                 <li key={item.id}>
                   <Link
                     href={`/items/${item.tagCode}`}
-                    className="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 active:bg-base-200"
+                    className="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 hover:bg-base-200/50 active:bg-base-200"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-mono text-sm font-semibold">{item.tagCode}</p>
@@ -130,6 +131,7 @@ async function EntryDetail({ params }: { params: Promise<{ id: string }> }) {
             </ul>
           </section>
         )}
+        </div>
       </div>
     </>
   );

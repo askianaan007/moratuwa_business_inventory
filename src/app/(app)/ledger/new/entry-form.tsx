@@ -332,7 +332,7 @@ function EntryFormFields({
         </Section>
       )}
 
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 bg-base-200/90 px-4 py-3 backdrop-blur">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 bg-base-200/90 px-4 py-3 lg:bottom-0 backdrop-blur">
         <button type="submit" className="btn btn-primary btn-lg w-full" disabled={pending}>
           {pending && <span className="loading loading-spinner" />}
           Save entry

@@ -263,7 +263,7 @@ export function LayoutEditor({ detail }: { detail: RoomDetail }) {
         </div>
       </div>
 
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 border-t border-base-300 bg-base-100/95 px-4 py-3 backdrop-blur">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 lg:bottom-0 lg:-mx-8 lg:px-8 border-t border-base-300 bg-base-100/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <p className="min-w-0 flex-1 truncate text-sm">{error ? <span className="text-error">{error}</span> : dirty ? "Unsaved changes" : "No changes"}</p>
           <button type="button" className="btn btn-primary" disabled={!dirty || pending || blocks.length === 0 || blockers.length > 0} onClick={() => void save()}>

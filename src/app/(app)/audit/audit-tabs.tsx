@@ -14,9 +14,9 @@ export function AuditTabs() {
   const pathname = usePathname();
   if (!TABS.some((t) => t.href === pathname)) return null;
   return (
-    <div role="tablist" className="tabs tabs-box mb-4 w-full">
+    <div role="tablist" className="tabs tabs-box mb-4 w-full sm:w-fit">
       {TABS.map((t) => (
-        <Link key={t.href} role="tab" href={t.href} aria-selected={pathname === t.href} className={`tab flex-1 ${pathname === t.href ? "tab-active" : ""}`}>
+        <Link key={t.href} role="tab" href={t.href} aria-selected={pathname === t.href} className={`tab flex-1 sm:flex-none sm:px-6 ${pathname === t.href ? "tab-active" : ""}`}>
           {t.label}
         </Link>
       ))}

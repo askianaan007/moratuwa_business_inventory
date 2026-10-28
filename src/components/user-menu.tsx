@@ -7,7 +7,8 @@ import { roleLabel } from "@/lib/format";
 import type { User } from "@/lib/types";
 import { BookIcon, LogoutIcon } from "./icons";
 
-export function UserMenu({ user }: { user: User }) {
+/** Account menu. `expanded` is the sidebar variant: name and role beside the avatar, opening upwards. */
+export function UserMenu({ user, expanded = false }: { user: User; expanded?: boolean }) {
   const router = useRouter();
   const initials = user.name
     .split(/\s+/)
@@ -23,11 +24,23 @@ export function UserMenu({ user }: { user: User }) {
   }
 
   return (
-    <div className="dropdown dropdown-end">
-      <button type="button" className="btn btn-circle btn-secondary" aria-label="Account menu">
-        {initials}
-      </button>
-      <div className="dropdown-content z-50 mt-2 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+    <div className={expanded ? "dropdown dropdown-top w-full" : "dropdown dropdown-end"}>
+      {expanded ? (
+        <button type="button" className="btn btn-ghost h-auto w-full justify-start gap-3 px-2 py-2 text-left font-normal" aria-label="Account menu">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-content">
+            {initials}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold">{user.name}</span>
+            <span className="block truncate text-xs text-base-content/60">{roleLabel[user.role]}</span>
+          </span>
+        </button>
+      ) : (
+        <button type="button" className="btn btn-circle btn-secondary" aria-label="Account menu">
+          {initials}
+        </button>
+      )}
+      <div className="dropdown-content z-50 my-2 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
         <div className="px-3 py-2">
           <p className="font-semibold">{user.name}</p>
           <p className="truncate text-sm text-base-content/70">{user.email}</p>

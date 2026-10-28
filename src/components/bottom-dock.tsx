@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookIcon, ClipboardIcon, FileIcon, HomeIcon, ScanIcon } from "./icons";
 
-const tabs = [
+/** Main sections, shared with the desktop sidebar. */
+export const navTabs = [
   { href: "/", label: "Home", Icon: HomeIcon },
   { href: "/ledger", label: "Ledger", Icon: BookIcon },
   { href: "/scan", label: "Scan", Icon: ScanIcon, primary: true },
@@ -12,7 +13,7 @@ const tabs = [
   { href: "/reports", label: "Reports", Icon: FileIcon },
 ];
 
-/** Thumb-reachable main navigation, fixed to the bottom of the screen. */
+/** Thumb-reachable main navigation, fixed to the bottom of the screen. Replaced by the sidebar on desktop. */
 export function BottomDock() {
   return <DockLinks pathname={usePathname()} />;
 }
@@ -28,9 +29,9 @@ export function DockLinks({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Main"
-      className="dock dock-lg z-40 border-t border-base-300 bg-base-100 pb-[env(safe-area-inset-bottom)]"
+      className="dock dock-lg z-40 lg:hidden border-t border-base-300 bg-base-100 pb-[env(safe-area-inset-bottom)]"
     >
-      {tabs.map(({ href, label, Icon, primary }) =>
+      {navTabs.map(({ href, label, Icon, primary }) =>
         primary ? (
           <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined}>
             <span className="-mt-7 flex size-14 items-center justify-center rounded-full bg-primary text-primary-content shadow-lg ring-4 ring-base-100">

@@ -69,7 +69,7 @@ async function Overview({ searchParams }: { searchParams: Promise<Record<string,
           )}
         </EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 lg:gap-4">
           {data.rooms.map((room) => {
             const audit = room.audit;
             const p = audit?.progress;

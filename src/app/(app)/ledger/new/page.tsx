@@ -10,12 +10,12 @@ export const metadata: Metadata = { title: "New entry" };
 
 export default function NewEntryPage({ searchParams }: PageProps<"/ledger/new">) {
   return (
-    <>
+    <div className="mx-auto w-full max-w-3xl">
       <PageHeader title="New ledger entry" subtitle="Same order as the ledger book" backHref="/ledger" />
       <Suspense fallback={<CardSkeleton rows={6} />}>
         <FormLoader searchParams={searchParams} />
       </Suspense>
-    </>
+    </div>
   );
 }
 

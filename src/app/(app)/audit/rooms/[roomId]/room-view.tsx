@@ -141,13 +141,13 @@ export function RoomView({ detail, types, canConfigure, canEdit }: { detail: Roo
         {fixtures.length === 0 ? (
           <p className="text-sm text-base-content/60">No AC, TV or other room items recorded.</p>
         ) : (
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {fixtures.map((f) => (
               <li key={f.id}>
                 <button
                   type="button"
                   onClick={() => setSelection({ kind: "fixture", equipmentId: f.id })}
-                  className="flex w-full items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 text-left transition-colors active:bg-base-200"
+                  className="flex w-full items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 text-left transition-colors hover:bg-base-200/50 active:bg-base-200"
                 >
                   <span className="font-mono font-semibold">{f.code}</span>
                   <span className="flex-1 truncate text-sm text-base-content/70">{f.type.name}</span>

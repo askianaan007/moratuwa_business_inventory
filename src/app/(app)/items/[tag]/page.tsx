@@ -34,8 +34,8 @@ async function ItemDetail({ params }: { params: Promise<{ tag: string }> }) {
         <Badge className="badge-md badge-ghost">{itemStatusLabel[item.status]}</Badge>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <section className="rounded-box border border-base-300 bg-base-100 p-4">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
+        <section className="rounded-box border border-base-300 bg-base-100 p-4 lg:p-5">
           <dl>
             <Field label="Serial No">{item.isBulk ? `Bulk × ${item.bulkQty}` : item.serialNo}</Field>
             <Field label="Location">{item.location ? `${item.location.code} — ${item.location.name}` : null}</Field>
@@ -52,7 +52,7 @@ async function ItemDetail({ params }: { params: Promise<{ tag: string }> }) {
           </Link>
         </section>
 
-        <section>
+        <section className="lg:rounded-box lg:border lg:border-base-300 lg:bg-base-100 lg:p-5">
           <h2 className="mb-2 font-semibold">Movement history</h2>
           {item.movements.length === 0 ? (
             <p className="text-sm text-base-content/60">No movements recorded.</p>

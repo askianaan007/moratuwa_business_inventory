@@ -157,7 +157,7 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
         action={<Badge className={`badge-md ${auditStatusBadge[audit.status].className}`}>{auditStatusBadge[audit.status].label}</Badge>}
       />
 
-      <div className="sticky top-16 z-20 -mx-4 mb-3 border-b border-base-300 bg-base-100/95 px-4 py-2 backdrop-blur">
+      <div className="sticky top-16 z-20 -mx-4 mb-3 lg:top-0 lg:-mx-8 lg:px-8 border-b border-base-300 bg-base-100/95 px-4 py-2 backdrop-blur">
         <div className="flex items-center gap-3">
           <progress className="progress progress-primary h-2.5 flex-1" value={progress.checked} max={progress.total || 1} aria-label="Audit progress" />
           <span className="text-sm font-semibold tabular-nums">
@@ -263,7 +263,7 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
                             )}
                           </div>
                         )}
-                        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
                           {row.stations.map((s) => (
                             <li key={s.key}>
                               <StationCard station={s} onOpen={() => setOpen(s.key)} />
