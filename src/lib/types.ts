@@ -1,6 +1,7 @@
 /** Shapes returned by the LabLedger API (moratuwa_backend). Money is a decimal string. */
 
 export type Role = "ADMIN" | "HOD" | "TECHNICAL_OFFICER" | "VIEWER";
+export type LedgerEntryType = "RECEIPT" | "TRANSFER" | "DISPOSAL" | "RETURN";
 export type BookStatus = "PENDING_BOOK" | "WRITTEN_IN_BOOK" | "SYSTEM_ONLY";
 export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 export type ItemCondition = "GOOD" | "NEEDS_REPAIR" | "DAMAGED" | "UNSERVICEABLE";
@@ -21,6 +22,22 @@ export interface Location {
   departmentId?: string;
 }
 
+/** Item variety (Monitors, Chairs …). Managed by admins. */
+export interface Category {
+  id: string;
+  code: string;
+  name: string;
+}
+
+/** GET /categories row: the category plus its ledger summary. */
+export interface CategorySummary extends Category {
+  description: string | null;
+  isActive: boolean;
+  entries: number;
+  receivedQuantity: number;
+  receivedValue: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -33,16 +50,26 @@ export interface User {
 export interface LedgerEntry {
   id: string;
   departmentId: string;
+  entryType: LedgerEntryType;
   entryDate: string;
+  /** Receipts only: "No", SIN No and SIN date. */
+  receiptNo: string | null;
+  sinNo: string | null;
+  sinDate: string | null;
+  /** Transfers, disposals and returns. */
   refNo: string | null;
   description: string;
   brand: string | null;
   modelNo: string | null;
+  serialNo: string | null;
+  itemCode: string | null;
   quantity: number;
   unitPrice: string;
   value: string;
   remark: string | null;
-  category: string | null;
+  hodSigned: boolean;
+  categoryId: string | null;
+  category: Category | null;
   bookVolume: string | null;
   bookPage: number | null;
   bookStatus: BookStatus;
@@ -81,7 +108,18 @@ export interface AssetItemDetail extends Omit<AssetItemSummary, "location"> {
   location: Pick<Location, "id" | "code" | "name"> | null;
   ledgerEntry: Pick<
     LedgerEntry,
-    "id" | "departmentId" | "entryDate" | "refNo" | "description" | "brand" | "modelNo" | "unitPrice" | "approvalStatus"
+    | "id"
+    | "departmentId"
+    | "entryDate"
+    | "receiptNo"
+    | "refNo"
+    | "description"
+    | "brand"
+    | "modelNo"
+    | "itemCode"
+    | "unitPrice"
+    | "approvalStatus"
+    | "category"
   >;
   auditRecords: { id: string; result: string; condition: ItemCondition | null; scannedAt: string; scannedBy: { name: string } }[];
   movements: {
@@ -101,7 +139,7 @@ export interface DashboardSummary {
   awaitingApproval: number;
   needsAttention: number;
   missing: number;
-  recent: Pick<LedgerEntry, "id" | "entryDate" | "description" | "brand" | "quantity" | "value" | "bookStatus">[];
+  recent: Pick<LedgerEntry, "id" | "entryType" | "entryDate" | "description" | "brand" | "quantity" | "value" | "bookStatus">[];
 }
 
 export interface PageMeta {

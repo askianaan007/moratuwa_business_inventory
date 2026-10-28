@@ -1,4 +1,4 @@
-import type { ApprovalStatus, BookStatus, ItemCondition, ItemStatus, Role } from "./types";
+import type { ApprovalStatus, BookStatus, ItemCondition, ItemStatus, LedgerEntryType, Role } from "./types";
 
 const lkr = new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR", minimumFractionDigits: 2 });
 
@@ -23,6 +23,15 @@ export const roleLabel: Record<Role, string> = {
   TECHNICAL_OFFICER: "Technical Officer",
   VIEWER: "Viewer",
 };
+
+export const entryTypeBadge: Record<LedgerEntryType, { label: string; className: string }> = {
+  RECEIPT: { label: "Receipt", className: "badge-primary" },
+  TRANSFER: { label: "Transfer", className: "badge-info" },
+  DISPOSAL: { label: "Disposal", className: "badge-error" },
+  RETURN: { label: "Return", className: "badge-warning" },
+};
+
+export const ENTRY_TYPES = Object.keys(entryTypeBadge) as LedgerEntryType[];
 
 export const bookStatusBadge: Record<BookStatus, { label: string; className: string }> = {
   PENDING_BOOK: { label: "Not in book", className: "badge-warning" },

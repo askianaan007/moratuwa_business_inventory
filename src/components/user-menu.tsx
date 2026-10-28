@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { roleLabel } from "@/lib/format";
 import type { User } from "@/lib/types";
-import { LogoutIcon } from "./icons";
+import { BookIcon, LogoutIcon } from "./icons";
 
 export function UserMenu({ user }: { user: User }) {
   const router = useRouter();
@@ -36,6 +37,12 @@ export function UserMenu({ user }: { user: User }) {
           </p>
         </div>
         <ul className="menu w-full p-0">
+          <li>
+            <Link href="/categories">
+              <BookIcon className="size-5" />
+              {user.role === "ADMIN" ? "Manage categories" : "Categories"}
+            </Link>
+          </li>
           <li>
             <button type="button" onClick={signOut}>
               <LogoutIcon className="size-5" />

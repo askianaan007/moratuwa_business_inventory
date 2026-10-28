@@ -40,10 +40,12 @@ async function ItemDetail({ params }: { params: Promise<{ tag: string }> }) {
             <Field label="Serial No">{item.isBulk ? `Bulk × ${item.bulkQty}` : item.serialNo}</Field>
             <Field label="Location">{item.location ? `${item.location.code} — ${item.location.name}` : null}</Field>
             <Field label="Custodian">{item.custodian}</Field>
+            <Field label="Category">{entry.category?.name}</Field>
+            <Field label="Item code">{entry.itemCode}</Field>
             <Field label="Brand / Model">{[entry.brand, entry.modelNo].filter(Boolean).join(" · ") || null}</Field>
             <Field label="Unit price">{formatLKR(entry.unitPrice)}</Field>
             <Field label="Received">{formatDate(entry.entryDate)}</Field>
-            <Field label="Ref. No">{entry.refNo}</Field>
+            <Field label="Receipt No">{entry.receiptNo ?? entry.refNo}</Field>
           </dl>
           <Link href={`/ledger/${entry.id}`} className="btn btn-outline btn-sm mt-3 w-full">
             Open ledger entry

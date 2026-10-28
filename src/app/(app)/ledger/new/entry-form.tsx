@@ -3,14 +3,26 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/api-client";
-import { formatLKR, todayISO } from "@/lib/format";
-import type { Department, LedgerEntryDetail, Location } from "@/lib/types";
+import { ENTRY_TYPES, entryTypeBadge, formatLKR, todayISO } from "@/lib/format";
+import type { Category, Department, LedgerEntryDetail, LedgerEntryType, Location } from "@/lib/types";
 
-const CATEGORIES = ["Computer & IT", "Lab equipment", "Measuring instrument", "Tool", "Furniture", "Consumable", "Other"];
-
-export function EntryForm({ departments, locations }: { departments: Department[]; locations: Location[] }) {
+export function EntryForm({
+  departments,
+  locations,
+  categories,
+  initialType,
+  initialCategoryId,
+}: {
+  departments: Department[];
+  locations: Location[];
+  categories: Category[];
+  initialType: LedgerEntryType;
+  initialCategoryId: string;
+}) {
   const router = useRouter();
   const [departmentId, setDepartmentId] = useState(departments.length === 1 ? departments[0]!.id : "");
+  const [entryType, setEntryType] = useState<LedgerEntryType>(initialType);
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [quantity, setQuantity] = useState("1");
   const [unitPrice, setUnitPrice] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -18,6 +30,7 @@ export function EntryForm({ departments, locations }: { departments: Department[
   const [pending, setPending] = useState(false);
 
   const value = (Number(quantity) || 0) * (Number(unitPrice) || 0);
+  const isReceipt = entryType === "RECEIPT";
   const deptLocations = locations.filter((l) => !l.departmentId || l.departmentId === departmentId);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -33,21 +46,29 @@ export function EntryForm({ departments, locations }: { departments: Department[
         method: "POST",
         body: {
           departmentId: departmentId || undefined,
+          entryType,
+          categoryId: categoryId || undefined,
           entryDate: text("entryDate"),
-          refNo: text("refNo"),
+          ...(isReceipt
+            ? { receiptNo: text("receiptNo"), sinNo: text("sinNo"), sinDate: text("sinDate") }
+            : { refNo: text("refNo") }),
           description: text("description"),
           brand: text("brand"),
           modelNo: text("modelNo"),
+          serialNo: text("serialNo"),
+          itemCode: text("itemCode"),
           quantity: Number(quantity),
           unitPrice,
           remark: text("remark"),
-          category: text("category"),
-          locationId: text("locationId"),
-          isBulk: form.get("isBulk") === "on",
-          serialNos: String(form.get("serialNos") ?? "")
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
+          hodSigned: form.get("hodSigned") === "on",
+          ...(isReceipt && {
+            locationId: text("locationId"),
+            isBulk: form.get("isBulk") === "on",
+            serialNos: String(form.get("serialNos") ?? "")
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          }),
         },
       });
       router.replace(`/ledger/${data.id}`);
@@ -85,11 +106,49 @@ export function EntryForm({ departments, locations }: { departments: Department[
         </Section>
       )}
 
-      <Section title="Ledger details">
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Date" name="entryDate" type="date" defaultValue={todayISO()} error={errors.entryDate} required />
-          <Input label="Ref. No" name="refNo" placeholder="GRN / PO no." error={errors.refNo} />
+      <Section title="Entry type & category">
+        <div role="radiogroup" aria-label="Entry type" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {ENTRY_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              role="radio"
+              aria-checked={entryType === type}
+              onClick={() => setEntryType(type)}
+              className={`btn ${entryType === type ? "btn-secondary" : "btn-outline border-base-300"}`}
+            >
+              {entryTypeBadge[type].label}
+            </button>
+          ))}
         </div>
+        <Select
+          label="Category"
+          value={categoryId}
+          onChange={setCategoryId}
+          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+          error={errors.categoryId}
+          required
+        />
+      </Section>
+
+      <Section title="Ledger details">
+        {isReceipt ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="No" name="receiptNo" placeholder="Receipt no." error={errors.receiptNo} />
+              <Input label="Date" name="entryDate" type="date" defaultValue={todayISO()} error={errors.entryDate} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="SIN No" name="sinNo" placeholder="Store Issue Note" error={errors.sinNo} />
+              <Input label="SIN date" name="sinDate" type="date" error={errors.sinDate} />
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Date" name="entryDate" type="date" defaultValue={todayISO()} error={errors.entryDate} required />
+            <Input label="Ref. No" name="refNo" placeholder="Transfer / BOS ref." error={errors.refNo} />
+          </div>
+        )}
         <Input
           label="Description"
           name="description"
@@ -100,6 +159,10 @@ export function EntryForm({ departments, locations }: { departments: Department[
         <div className="grid grid-cols-2 gap-3">
           <Input label="Brand" name="brand" error={errors.brand} />
           <Input label="Model No" name="modelNo" error={errors.modelNo} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Serial No" name="serialNo" error={errors.serialNo} />
+          <Input label="Item code" name="itemCode" error={errors.itemCode} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -129,39 +192,37 @@ export function EntryForm({ departments, locations }: { departments: Department[
           <span className="text-xl font-bold">{formatLKR(value)}</span>
         </div>
         <Textarea label="Remark" name="remark" rows={2} error={errors.remark} />
+        <label className="flex cursor-pointer items-center gap-3 py-1">
+          <input type="checkbox" name="hodSigned" className="checkbox checkbox-primary" />
+          <span className="font-medium">Signed by HOD in the book</span>
+        </label>
       </Section>
 
-      <Section title="Items & location">
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            label="Category"
-            name="category"
-            options={CATEGORIES.map((c) => ({ value: c, label: c }))}
-            error={errors.category}
-          />
+      {isReceipt && (
+        <Section title="Items & location">
           <Select
             label="Location"
             name="locationId"
             options={deptLocations.map((l) => ({ value: l.id, label: `${l.code} — ${l.name}` }))}
             error={errors.locationId}
           />
-        </div>
-        <Textarea
-          label="Serial numbers"
-          hint="One per line, in order. Leave blank if none."
-          name="serialNos"
-          rows={3}
-          error={errors.serialNos}
-          className="font-mono"
-        />
-        <label className="flex cursor-pointer items-start gap-3 py-1">
-          <input type="checkbox" name="isBulk" className="checkbox checkbox-primary mt-0.5" />
-          <span>
-            <span className="font-medium">Bulk / consumable</span>
-            <span className="block text-sm text-base-content/60">One tag for the whole quantity instead of one per unit</span>
-          </span>
-        </label>
-      </Section>
+          <Textarea
+            label="Serial numbers per tag"
+            hint="One per line, in order, for the QR-tagged items. Leave blank if none."
+            name="serialNos"
+            rows={3}
+            error={errors.serialNos}
+            className="font-mono"
+          />
+          <label className="flex cursor-pointer items-start gap-3 py-1">
+            <input type="checkbox" name="isBulk" className="checkbox checkbox-primary mt-0.5" />
+            <span>
+              <span className="font-medium">Bulk / consumable</span>
+              <span className="block text-sm text-base-content/60">One tag for the whole quantity instead of one per unit</span>
+            </span>
+          </label>
+        </Section>
+      )}
 
       <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 bg-base-200/90 px-4 py-3 backdrop-blur">
         <button type="submit" className="btn btn-primary btn-lg w-full" disabled={pending}>

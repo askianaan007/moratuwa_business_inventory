@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import type { LedgerEntryDetail, User } from "@/lib/types";
 
-/** Workflow buttons: mark as written in the book, submit to HOD, approve/reject. */
+/** Workflow buttons: HOD signature, mark as written in the book, submit to HOD, approve/reject. */
 export function EntryActions({ entry, user }: { entry: LedgerEntryDetail; user: User }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -19,13 +19,13 @@ export function EntryActions({ entry, user }: { entry: LedgerEntryDetail; user: 
   const canSubmit = canEdit && (entry.approvalStatus === "DRAFT" || entry.approvalStatus === "REJECTED");
   const needsBook = canEdit && entry.bookStatus === "PENDING_BOOK";
 
-  if (!canDecide && !canSubmit && !needsBook) return null;
+  if (!canEdit && !canDecide) return null;
 
-  async function run(path: string, body?: unknown) {
+  async function run(path: string, body?: unknown, method: "POST" | "PATCH" = "POST") {
     setPending(true);
     setError(null);
     try {
-      await api(`/ledger/${entry.id}${path}`, { method: "POST", body });
+      await api(`/ledger/${entry.id}${path}`, { method, body });
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reach the server.");
@@ -55,6 +55,19 @@ export function EntryActions({ entry, user }: { entry: LedgerEntryDetail; user: 
         <div role="alert" className="alert alert-error alert-soft text-sm">
           {error}
         </div>
+      )}
+
+      {canEdit && (
+        <label className="flex cursor-pointer items-center justify-between gap-3">
+          <span className="font-semibold">Signed by HOD in the book</span>
+          <input
+            type="checkbox"
+            className="toggle toggle-success"
+            checked={entry.hodSigned}
+            disabled={pending}
+            onChange={(e) => void run("", { hodSigned: e.target.checked }, "PATCH")}
+          />
+        </label>
       )}
 
       {needsBook && (

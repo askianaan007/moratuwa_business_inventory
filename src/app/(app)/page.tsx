@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { PlusIcon, ScanIcon } from "@/components/icons";
 import { Badge, CardSkeleton, EmptyState } from "@/components/ui";
 import { apiGet } from "@/lib/api-server";
-import { bookStatusBadge, formatDate, formatLKR } from "@/lib/format";
+import { bookStatusBadge, entryTypeBadge, formatDate, formatLKR } from "@/lib/format";
 import type { DashboardSummary } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -33,7 +33,7 @@ async function Summary() {
   return (
     <>
       <div className="rounded-box bg-secondary p-5 text-secondary-content">
-        <p className="text-sm opacity-70">Total inventory value</p>
+        <p className="text-sm opacity-70">Total value received</p>
         <p className="text-3xl font-bold tracking-tight">{formatLKR(data.totalValue)}</p>
         <p className="mt-1 text-sm opacity-70">
           {data.items} items across {data.entries} ledger entries
@@ -46,6 +46,10 @@ async function Summary() {
         <Stat label="Need repair / damaged" value={data.needsAttention} tone="text-error" />
         <Stat label="Missing" value={data.missing} tone="text-error" />
       </div>
+
+      <Link href="/categories" className="btn btn-outline w-full border-base-300">
+        Ledgers by category
+      </Link>
 
       <section>
         <div className="mb-2 flex items-center justify-between">
@@ -67,7 +71,7 @@ async function Summary() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{entry.description}</p>
                     <p className="text-sm text-base-content/60">
-                      {formatDate(entry.entryDate)} · Qty {entry.quantity}
+                      {entryTypeBadge[entry.entryType].label} · {formatDate(entry.entryDate)} · Qty {entry.quantity}
                       {entry.brand && ` · ${entry.brand}`}
                     </p>
                   </div>
