@@ -30,6 +30,13 @@ interface Section {
 
 type Filter = "all" | "todo" | "faults";
 const FAULTS = new Set<LabCheckStatus>(["NOT_WORKING", "NEEDS_REPAIR", "MISSING"]);
+const MONITOR = "MON";
+const GONE_WITHOUT_MONITOR = new Set(["CPU", "KBD", "MSE"]);
+// "All working" shortcuts leave the UPS alone; it is checked on its own.
+const SKIP_ALL_WORKING = new Set(["UPS"]);
+const quickWorkable = (c: LabCheck) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart && !SKIP_ALL_WORKING.has(c.typeCode);
+const canMonitorOnly = (checks: LabCheck[]) =>
+  checks.some((c) => c.typeCode === MONITOR && c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart);
 const AUDITORS = new Set(["ADMIN", "HOD", "TECHNICAL_OFFICER"]);
 
 /** Block → row → PC, in the order an auditor walks the room. */
@@ -128,7 +135,20 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
 
   const markWorking = useCallback(
     (list: LabCheck[]) => {
-      for (const c of list) if (c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart) record(c.id, { status: "WORKING" });
+      for (const c of list) if (quickWorkable(c)) record(c.id, { status: "WORKING" });
+    },
+    [record],
+  );
+
+  // Only the monitor is left at this PC: monitor working, CPU/keyboard/mouse
+  // missing, UPS and anything else left unchecked. Unchecked items only.
+  const markMonitorOnly = useCallback(
+    (list: LabCheck[]) => {
+      for (const c of list) {
+        if (c.status !== "NOT_CHECKED" || c.targetRetiredAfterStart) continue;
+        if (c.typeCode === MONITOR) record(c.id, { status: "WORKING" });
+        else if (GONE_WITHOUT_MONITOR.has(c.typeCode)) record(c.id, { status: "MISSING", faultReasonId: null, reasonText: "Not at the PC" });
+      }
     },
     [record],
   );
@@ -250,7 +270,7 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
                 <h2 className="mb-2 text-sm font-bold tracking-wide text-base-content/70 uppercase">{section.title}</h2>
                 <div className="flex flex-col gap-3">
                   {rows.map((row) => {
-                    const unchecked = row.stations.flatMap((s) => s.checks).filter((c) => c.status === "NOT_CHECKED");
+                    const unchecked = row.stations.flatMap((s) => s.checks).filter(quickWorkable);
                     return (
                       <div key={row.key}>
                         {row.label && (
@@ -266,7 +286,12 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
                         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
                           {row.stations.map((s) => (
                             <li key={s.key}>
-                              <StationCard station={s} onOpen={() => setOpen(s.key)} onAllWorking={editable ? () => markWorking(s.checks) : undefined} />
+                              <StationCard
+                                station={s}
+                                onOpen={() => setOpen(s.key)}
+                                onAllWorking={editable ? () => markWorking(s.checks) : undefined}
+                                onMonitorOnly={editable ? () => markMonitorOnly(s.checks) : undefined}
+                              />
                             </li>
                           ))}
                         </ul>
@@ -295,7 +320,7 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
               <button type="button" className="btn btn-ghost btn-sm" disabled={index <= 0} onClick={() => go(-1)} aria-label="Previous">
                 ← Prev
               </button>
-              {editable && current.checks.some((c) => c.status === "NOT_CHECKED") ? (
+              {editable && current.checks.some(quickWorkable) ? (
                 <button
                   type="button"
                   className="btn btn-success flex-1"
@@ -320,6 +345,11 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
       >
         {current && (
           <div key={current.key} className="animate-in flex flex-col gap-3">
+            {editable && canMonitorOnly(current.checks) && (
+              <button type="button" className="btn btn-outline btn-sm self-start" onClick={() => markMonitorOnly(current.checks)}>
+                Monitor only · CPU, keyboard, mouse missing
+              </button>
+            )}
             {current.checks.map((c) => (
               <CheckItem key={c.id} check={c} reasons={reasonsFor(c.typeCode)} editable={editable} error={outbox.errors[c.id]} onRecord={record} />
             ))}
@@ -330,18 +360,29 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
   );
 }
 
-function StationCard({ station, onOpen, onAllWorking }: { station: Station; onOpen: () => void; onAllWorking?: () => void }) {
+function StationCard({
+  station,
+  onOpen,
+  onAllWorking,
+  onMonitorOnly,
+}: {
+  station: Station;
+  onOpen: () => void;
+  onAllWorking?: () => void;
+  onMonitorOnly?: () => void;
+}) {
   const status = statusOf(station);
   const meta = checkStatus[status];
   const done = station.checks.filter((c) => c.status !== "NOT_CHECKED").length;
-  // Quick tick: marks every unchecked item on this PC working without opening it.
-  const canTick = onAllWorking && station.checks.some((c) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart);
+  // Quick tick: marks every unchecked item on this PC (except the UPS) working without opening it.
+  const canTick = onAllWorking && station.checks.some(quickWorkable);
+  const canMonOnly = onMonitorOnly && canMonitorOnly(station.checks);
   return (
     <div className="relative h-full">
       <button
         type="button"
         onClick={onOpen}
-        className={`flex h-full w-full flex-col gap-1 rounded-box border-2 bg-base-100 p-2.5 text-left transition-[transform,border-color] duration-150 active:scale-[0.98] ${
+        className={`flex h-full w-full flex-col gap-1 rounded-box border-2 bg-base-100 p-2.5 text-left ${canTick || canMonOnly ? "pb-10" : ""} transition-[transform,border-color] duration-150 active:scale-[0.98] ${
           status === "NOT_CHECKED" ? "border-base-300" : status === "WORKING" ? "border-success/60" : FAULTS.has(status) ? "border-error/70" : "border-base-content/30"
         }`}
       >
@@ -363,10 +404,25 @@ function StationCard({ station, onOpen, onAllWorking }: { station: Station; onOp
           {done}/{station.checks.length} checked
         </span>
       </button>
-      {canTick && (
-        <button type="button" onClick={onAllWorking} className="btn btn-success btn-xs absolute right-2 bottom-2" aria-label={`Mark all items on ${station.label} working`} title="All working">
-          ✓ All
-        </button>
+      {(canTick || canMonOnly) && (
+        <div className="absolute inset-x-2 bottom-2 flex justify-end gap-1">
+          {canMonOnly && (
+            <button
+              type="button"
+              onClick={onMonitorOnly}
+              className="btn btn-outline btn-xs"
+              aria-label={`${station.label}: monitor working, CPU, keyboard and mouse missing`}
+              title="Monitor only: CPU, keyboard and mouse missing; UPS left unchecked"
+            >
+              MON only
+            </button>
+          )}
+          {canTick && (
+            <button type="button" onClick={onAllWorking} className="btn btn-success btn-xs" aria-label={`Mark all items on ${station.label} working`} title="All working (UPS left unchecked)">
+              ✓ All
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
