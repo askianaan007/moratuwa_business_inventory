@@ -13,6 +13,11 @@ export interface Department {
   name: string;
 }
 
+export interface DepartmentSummary extends Department {
+  locations: number;
+  users: number;
+}
+
 export interface Location {
   id: string;
   code: string;
@@ -257,6 +262,8 @@ export interface RoomBlock {
   code: string;
   name: string;
   order: number;
+  /** Seats are numbered from the right-hand end (right-most seat is S1). */
+  seatsFromRight: boolean;
   rows: RoomRow[];
 }
 

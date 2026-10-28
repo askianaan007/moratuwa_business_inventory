@@ -5,13 +5,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { navTabs } from "./bottom-dock";
-import { GridIcon, PlusIcon, SearchIcon } from "./icons";
+import { GridIcon, PlusIcon, SearchIcon, SettingsIcon } from "./icons";
 
 type NavTab = { href: string; label: string; Icon: (p: { className?: string }) => React.ReactNode };
 
 const groups: { label: string; tabs: readonly NavTab[] }[] = [
   { label: "Workspace", tabs: navTabs },
-  { label: "Manage", tabs: [{ href: "/categories", label: "Categories", Icon: GridIcon }] },
+  {
+    label: "Manage",
+    tabs: [
+      { href: "/categories", label: "Categories", Icon: GridIcon },
+      { href: "/departments", label: "Departments", Icon: SettingsIcon },
+    ],
+  },
 ];
 
 /** Desktop sidebar navigation. The bottom dock takes its place on phones and tablets. */

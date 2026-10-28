@@ -27,6 +27,7 @@ interface DraftBlock {
   id?: string;
   code: string;
   name: string;
+  seatsFromRight?: boolean;
   rows: DraftRow[];
 }
 interface Preview {
@@ -49,6 +50,7 @@ function fromDetail(detail: RoomDetail): DraftBlock[] {
     id: b.id,
     code: b.code,
     name: b.name,
+    seatsFromRight: b.seatsFromRight,
     rows: b.rows.map((r) => ({
       key: k(),
       id: r.id,
@@ -63,6 +65,7 @@ const toInput = (blocks: DraftBlock[]) =>
     ...(b.id && { id: b.id }),
     code: b.code.trim().toUpperCase(),
     name: b.name.trim() || `Block ${b.code}`,
+    seatsFromRight: Boolean(b.seatsFromRight),
     rows: b.rows.map((r) => ({
       ...(r.id && { id: r.id }),
       label: r.label.trim(),
@@ -345,6 +348,7 @@ function BlockEditor({
   onRemove: () => void;
 }) {
   const hasPcs = block.rows.some((r) => r.seats.some((s) => s.label));
+  const seatNo = (count: number, si: number) => (block.seatsFromRight ? count - si : si + 1);
   const setRow = (ri: number, fn: (r: DraftRow) => DraftRow) => onChange((b) => ({ ...b, rows: b.rows.map((r, i) => (i === ri ? fn(r) : r)) }));
 
   return (
@@ -375,6 +379,16 @@ function BlockEditor({
         </div>
       </header>
 
+      <label className="flex items-center gap-2 border-b border-base-200 px-3 py-2 text-sm">
+        <input
+          type="checkbox"
+          className="checkbox checkbox-sm"
+          checked={Boolean(block.seatsFromRight)}
+          onChange={(e) => onChange((b) => ({ ...b, seatsFromRight: e.target.checked }))}
+        />
+        Count seats from the right (right-most seat is S1)
+      </label>
+
       <ol className="flex flex-col divide-y divide-base-200">
         {block.rows.map((row, ri) => (
           <li key={row.key} className="flex items-center gap-2 px-3 py-2">
@@ -395,12 +409,12 @@ function BlockEditor({
                       seats: r.seats.map((s, i) => (i === si ? { ...s, kind: SEAT_CYCLE[(SEAT_CYCLE.indexOf(s.kind) + 1) % SEAT_CYCLE.length]! } : s)),
                     }))
                   }
-                  title={`${block.code}-R${row.label}-S${si + 1}${seat.label ? ` · ${seat.label}` : ""}`}
-                  aria-label={`${block.code}-R${row.label}-S${si + 1}: ${seatKind[seat.kind].label}${seat.label ? `, ${seat.label}` : ""}`}
+                  title={`${block.code}-R${row.label}-S${seatNo(row.seats.length, si)}${seat.label ? ` · ${seat.label}` : ""}`}
+                  aria-label={`${block.code}-R${row.label}-S${seatNo(row.seats.length, si)}: ${seatKind[seat.kind].label}${seat.label ? `, ${seat.label}` : ""}`}
                   className={`btn btn-sm h-10 min-w-11 shrink-0 flex-col gap-0 px-1 text-[10px] leading-tight transition-transform active:scale-95 ${seatKind[seat.kind].className}`}
                 >
                   <span className="font-semibold">{seatKind[seat.kind].short}</span>
-                  <span className="opacity-70">{seat.label ? seat.label.replace(/^[A-Z]+-/, "") : `S${si + 1}`}</span>
+                  <span className="opacity-70">{seat.label ? seat.label.replace(/^[A-Z]+-/, "") : `S${seatNo(row.seats.length, si)}`}</span>
                 </button>
               ))}
             </div>
