@@ -76,7 +76,15 @@ export function RoomPlan({
           </text>
 
           {plan.blocks.map((b) => (
-            <text key={b.id} x={b.x + 28} y={b.y + 14} fontSize={11} fontWeight={700} className="fill-base-content">
+            <text
+              key={b.id}
+              x={b.mirrored ? b.x + b.w - 28 : b.x + 28}
+              y={b.y + 14}
+              textAnchor={b.mirrored ? "end" : "start"}
+              fontSize={11}
+              fontWeight={700}
+              className="fill-base-content"
+            >
               {b.code} · {b.name}
             </text>
           ))}
