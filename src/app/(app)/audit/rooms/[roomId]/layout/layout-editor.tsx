@@ -61,18 +61,21 @@ function fromDetail(detail: RoomDetail): DraftBlock[] {
 }
 
 /**
- * Blocks on the left half of the room are drawn with S1 at their right-hand
- * end (next to the centre aisle). Same rule as the API's plan geometry.
+ * Student blocks on the left half of the room are drawn with S1 at their
+ * right-hand end (next to the centre aisle); instructor-only blocks stand
+ * centred at the front. Same rule as the API's plan geometry.
  */
 function mirroredBlocks(blocks: DraftBlock[]) {
-  const widths = blocks.map((b) => {
+  const isFront = (b: DraftBlock) => b.rows.length > 0 && b.rows.every((r) => r.seats.every((s) => s.kind === "INSTRUCTOR" || s.kind === "NO_TABLE"));
+  const main = blocks.every(isFront) ? blocks : blocks.filter((b) => !isFront(b));
+  const widths = main.map((b) => {
     const seats = Math.max(1, ...b.rows.map((r) => r.seats.length));
     return 28 + seats * 64 + (seats - 1) * 6;
   });
   const total = widths.reduce((n, w) => n + w + 40, 0) - 40;
   let cursor = 0;
   return new Set(
-    blocks.flatMap((b, i) => {
+    main.flatMap((b, i) => {
       const centre = cursor + widths[i]! / 2;
       cursor += widths[i]! + 40;
       return centre < total / 2 ? [b.key] : [];
