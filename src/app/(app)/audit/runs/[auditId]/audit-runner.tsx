@@ -63,7 +63,14 @@ function buildSections(audit: LabAuditDetail, checks: LabCheck[]): Section[] {
     title: `${b.code} · ${b.name}`,
     rows: audit.plan.rows
       .filter((r) => r.blockId === b.id)
-      .map((r) => ({ key: r.id, label: `Row ${r.label}`, stations: [...stations.values()].filter((s) => s.blockCode === b.code && s.rowLabel === r.label) }))
+      .map((r) => ({
+        key: r.id,
+        label: `Row ${r.label}`,
+        // Left to right as drawn on the plan (mirrored blocks start from their last seat).
+        stations: [...stations.values()]
+          .filter((s) => s.blockCode === b.code && s.rowLabel === r.label)
+          .sort((x, y) => (deskBySeat.get(x.seatId ?? "")?.x ?? 0) - (deskBySeat.get(y.seatId ?? "")?.x ?? 0)),
+      }))
       .filter((r) => r.stations.length),
   }));
   const fixtures = [...stations.values()].filter((s) => !s.blockCode && s.key.startsWith("E:") && !s.checks[0]?.workstationId);

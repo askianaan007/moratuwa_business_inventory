@@ -60,6 +60,26 @@ function fromDetail(detail: RoomDetail): DraftBlock[] {
   }));
 }
 
+/**
+ * Blocks on the left half of the room are drawn with S1 at their right-hand
+ * end (next to the centre aisle). Same rule as the API's plan geometry.
+ */
+function mirroredBlocks(blocks: DraftBlock[]) {
+  const widths = blocks.map((b) => {
+    const seats = Math.max(1, ...b.rows.map((r) => r.seats.length));
+    return 28 + seats * 64 + (seats - 1) * 6;
+  });
+  const total = widths.reduce((n, w) => n + w + 40, 0) - 40;
+  let cursor = 0;
+  return new Set(
+    blocks.flatMap((b, i) => {
+      const centre = cursor + widths[i]! / 2;
+      cursor += widths[i]! + 40;
+      return centre < total / 2 ? [b.key] : [];
+    }),
+  );
+}
+
 const toInput = (blocks: DraftBlock[]) =>
   blocks.map((b) => ({
     ...(b.id && { id: b.id }),
@@ -88,6 +108,7 @@ export function LayoutEditor({ detail }: { detail: RoomDetail }) {
   const [dirty, setDirty] = useState(false);
   const { pending, error, run, setError } = useAction();
   const body = useMemo(() => JSON.stringify(toInput(blocks)), [blocks]);
+  const mirrored = useMemo(() => mirroredBlocks(blocks), [blocks]);
   const lastSent = useRef("");
 
   // Debounced preview. Ignores stale responses.
@@ -199,6 +220,7 @@ export function LayoutEditor({ detail }: { detail: RoomDetail }) {
             <BlockEditor
               key={block.key}
               block={block}
+              mirrored={mirrored.has(block.key)}
               first={bi === 0}
               last={bi === blocks.length - 1}
               onChange={(fn) => update((d) => d.map((b, i) => (i === bi ? fn(b) : b)))}
@@ -334,6 +356,7 @@ function SeatLegend() {
 
 function BlockEditor({
   block,
+  mirrored,
   first,
   last,
   onChange,
@@ -341,6 +364,7 @@ function BlockEditor({
   onRemove,
 }: {
   block: DraftBlock;
+  mirrored: boolean;
   first: boolean;
   last: boolean;
   onChange: (fn: (b: DraftBlock) => DraftBlock) => void;
@@ -379,16 +403,6 @@ function BlockEditor({
         </div>
       </header>
 
-      <label className="flex items-center gap-2 border-b border-base-200 px-3 py-2 text-sm">
-        <input
-          type="checkbox"
-          className="checkbox checkbox-sm"
-          checked={Boolean(block.seatsFromRight)}
-          onChange={(e) => onChange((b) => ({ ...b, seatsFromRight: e.target.checked }))}
-        />
-        Count seats from the right (right-most seat is S1)
-      </label>
-
       <ol className="flex flex-col divide-y divide-base-200">
         {block.rows.map((row, ri) => (
           <li key={row.key} className="flex items-center gap-2 px-3 py-2">
@@ -398,7 +412,7 @@ function BlockEditor({
               aria-label={`Row ${ri + 1} label`}
               className="input input-xs w-10 shrink-0 text-center font-mono"
             />
-            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto py-1 [scrollbar-width:none]">
+            <div className={`flex min-w-0 flex-1 gap-1 overflow-x-auto py-1 [scrollbar-width:none] ${mirrored ? "flex-row-reverse justify-end" : ""}`}>
               {row.seats.map((seat, si) => (
                 <button
                   key={seat.key}

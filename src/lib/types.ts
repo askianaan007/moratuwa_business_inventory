@@ -173,7 +173,8 @@ export interface PlanGeometry {
   width: number;
   height: number;
   board: { x: number; y: number; w: number; h: number };
-  blocks: { id: string; code: string; name: string; x: number; y: number; w: number; h: number }[];
+  /** mirrored: drawn with S1 at the right-hand end (blocks on the left half of the room). */
+  blocks: { id: string; code: string; name: string; x: number; y: number; w: number; h: number; mirrored?: boolean }[];
   rows: { id: string; blockId: string; label: string; x: number; y: number }[];
   desks: {
     seatId: string;
