@@ -32,9 +32,11 @@ type Filter = "all" | "todo" | "faults";
 const FAULTS = new Set<LabCheckStatus>(["NOT_WORKING", "NEEDS_REPAIR", "MISSING"]);
 const MONITOR = "MON";
 const GONE_WITHOUT_MONITOR = new Set(["CPU", "KBD", "MSE"]);
-// "All working" shortcuts leave the UPS alone; it is checked on its own.
+// The card and row shortcuts leave the UPS alone; "All working · next" inside
+// a PC includes it, since the auditor is looking at that PC's items.
 const SKIP_ALL_WORKING = new Set(["UPS"]);
-const quickWorkable = (c: LabCheck) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart && !SKIP_ALL_WORKING.has(c.typeCode);
+const workable = (c: LabCheck) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart;
+const quickWorkable = (c: LabCheck) => workable(c) && !SKIP_ALL_WORKING.has(c.typeCode);
 const canMonitorOnly = (checks: LabCheck[]) =>
   checks.some((c) => c.typeCode === MONITOR && c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart);
 const AUDITORS = new Set(["ADMIN", "HOD", "TECHNICAL_OFFICER"]);
@@ -134,8 +136,8 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
   }, [checks]);
 
   const markWorking = useCallback(
-    (list: LabCheck[]) => {
-      for (const c of list) if (quickWorkable(c)) record(c.id, { status: "WORKING" });
+    (list: LabCheck[], includeUps = false) => {
+      for (const c of list) if (includeUps ? workable(c) : quickWorkable(c)) record(c.id, { status: "WORKING" });
     },
     [record],
   );
@@ -320,12 +322,12 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
               <button type="button" className="btn btn-ghost btn-sm" disabled={index <= 0} onClick={() => go(-1)} aria-label="Previous">
                 ← Prev
               </button>
-              {editable && current.checks.some(quickWorkable) ? (
+              {editable && current.checks.some(workable) ? (
                 <button
                   type="button"
                   className="btn btn-success flex-1"
                   onClick={() => {
-                    markWorking(current.checks);
+                    markWorking(current.checks, true);
                     if (index >= 0 && index < order.length - 1) go(1);
                   }}
                 >
