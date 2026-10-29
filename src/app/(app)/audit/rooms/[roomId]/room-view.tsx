@@ -199,6 +199,8 @@ export function RoomView({ detail, types, canConfigure, canEdit }: { detail: Roo
       <Sheet open={Boolean(fixture)} onClose={() => setSelection(null)} title={fixture?.type.name ?? ""} subtitle={fixture && <span className="font-mono">{fixture.code}</span>}>
         {fixture && <EquipmentEditor key={fixture.id} item={fixture} canEdit={canEdit} workstations={workstations} />}
       </Sheet>
+
+      {canConfigure && <RoomDangerZone roomId={room.id} roomCode={room.code} openAudit={openAudit} />}
     </>
   );
 }
@@ -459,5 +461,74 @@ function AddToAllPcs({ roomId, types, pcCount }: { roomId: string; types: Equipm
         </button>
       )}
     </div>
+  );
+}
+
+/** Reset (empty layout, same room) or delete the room. Both ask for a reason. */
+function RoomDangerZone({ roomId, roomCode, openAudit }: { roomId: string; roomCode: string; openAudit: RoomDetail["openAudit"] }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<"reset" | "delete" | null>(null);
+  const { pending, error, run, setError } = useAction();
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const reason = String(new FormData(event.currentTarget).get("reason") ?? "").trim();
+    if (mode === "reset") {
+      const res = await run(() => api(`/rooms/${roomId}/reset`, { method: "POST", body: { reason } }));
+      if (!res) return;
+      setMode(null);
+      router.refresh();
+    } else {
+      const res = await run(() => api(`/rooms/${roomId}`, { method: "DELETE", body: { reason } }));
+      if (!res) return;
+      router.replace("/audit/rooms");
+      router.refresh();
+    }
+  }
+
+  const choose = (next: "reset" | "delete" | null) => {
+    setError(null);
+    setMode(next);
+  };
+
+  return (
+    <section className="mt-6 flex flex-col gap-2 border-t border-base-300 pt-4">
+      <h2 className="text-sm font-semibold text-base-content/70">Reset or delete room</h2>
+      {!mode ? (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => choose("reset")}>
+            Reset room
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm text-error" onClick={() => choose("delete")}>
+            Delete room
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="flex flex-col gap-2 rounded-box border border-error/40 p-4">
+          <p className="text-sm">
+            {mode === "reset"
+              ? `The layout, every PC and all equipment in ${roomCode} are removed so you can set the room up again. The room, its code and past audits stay. PC numbers start again from 1.`
+              : `${roomCode} is removed from the list along with its layout, PCs and equipment, and its code can be used again. Only possible when the room has no audits and no ledger items.`}{" "}
+            This cannot be undone.
+          </p>
+          {openAudit && (
+            <p className="text-sm text-warning">
+              The {openAudit.reference} audit is open. Delete or finish it first.
+            </p>
+          )}
+          <input name="reason" required minLength={3} placeholder="Reason" aria-label="Reason" className="input w-full" />
+          {error && <p className="text-sm text-error">{error}</p>}
+          <div className="flex gap-2">
+            <button type="submit" className="btn btn-error flex-1" disabled={pending}>
+              {pending && <span className="loading loading-spinner" />}
+              {mode === "reset" ? "Reset room" : "Delete room"}
+            </button>
+            <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => choose(null)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
