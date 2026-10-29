@@ -84,6 +84,7 @@ export function RoomView({ detail, types, canConfigure, canEdit }: { detail: Roo
             {formatPeriod(openAudit.period)} audit · {auditStatusBadge[openAudit.status].label}
           </Link>
         )}
+        {canConfigure && pcCount > 0 && <AddToAllPcs roomId={room.id} types={types} pcCount={pcCount} />}
       </div>
 
       {plan.desks.length === 0 ? (
@@ -363,5 +364,100 @@ function MovePcHere({ seatId, workstations, canConfigure }: { seatId: string; wo
       </button>
       {error && <p className="text-sm text-error">{error}</p>}
     </form>
+  );
+}
+
+/**
+ * Adds one item of a chosen type (UPS by default) to every PC that lacks one,
+ * coded after the PC number (UPS-07). Shows a dry run first. Remove it from a
+ * PC that has none with Retire on that item.
+ */
+function AddToAllPcs({ roomId, types, pcCount }: { roomId: string; types: EquipmentType[]; pcCount: number }) {
+  const router = useRouter();
+  const options = useMemo(() => types.filter((t) => t.isActive && t.scope !== "ROOM"), [types]);
+  const [open, setOpen] = useState(false);
+  const [typeId, setTypeId] = useState(() => (options.find((t) => t.code === "UPS") ?? options[0])?.id ?? "");
+  const [preview, setPreview] = useState<{ created: number; skipped: string[] } | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const { pending, error, run } = useAction();
+  const type = options.find((t) => t.id === typeId);
+
+  const generate = (dryRun: boolean) =>
+    run(() => api<{ data: { created: number; skipped: string[] } }>(`/rooms/${roomId}/equipment/generate?dryRun=${dryRun}`, { method: "POST", body: { typeId } }));
+
+  async function check(nextTypeId = typeId) {
+    setDone(null);
+    setPreview(null);
+    if (nextTypeId !== typeId) setTypeId(nextTypeId);
+    const res = await run(() =>
+      api<{ data: { created: number; skipped: string[] } }>(`/rooms/${roomId}/equipment/generate?dryRun=true`, { method: "POST", body: { typeId: nextTypeId } }),
+    );
+    if (res) setPreview(res.data);
+  }
+
+  async function add() {
+    const res = await generate(false);
+    if (!res) return;
+    setDone(`Added ${res.data.created} ${type?.name ?? "item"}${res.data.created === 1 ? "" : "s"}.`);
+    setPreview(null);
+    router.refresh();
+  }
+
+  if (!options.length) return null;
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm btn-outline ml-auto"
+        onClick={() => {
+          setOpen(true);
+          void check();
+        }}
+      >
+        + Add {(options.find((t) => t.id === typeId) ?? options[0])!.code} to all PCs
+      </button>
+    );
+  }
+
+  const already = preview ? pcCount - preview.created - preview.skipped.length : 0;
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-box border border-base-300 bg-base-100 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold">Add to every PC</span>
+        <select className="select select-sm w-auto" aria-label="Equipment type" value={typeId} onChange={(e) => void check(e.target.value)} disabled={pending}>
+          {options.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => setOpen(false)}>
+          Close
+        </button>
+      </div>
+      {pending && !preview && <p className="text-sm text-base-content/60">Checking…</p>}
+      {preview && (
+        <p className="text-sm">
+          {preview.created > 0 ? (
+            <>
+              Adds <b>{preview.created}</b> {type?.name}
+              {preview.created === 1 ? "" : "s"}, numbered after each PC ({type?.codePrefix}-01, {type?.codePrefix}-02 …).
+            </>
+          ) : (
+            <>Every PC already has a {type?.name}.</>
+          )}
+          {already > 0 && ` ${already} PC${already === 1 ? " already has" : "s already have"} one.`}
+          {preview.skipped.length > 0 && ` Skipped, code already used: ${preview.skipped.slice(0, 5).join(", ")}${preview.skipped.length > 5 ? "…" : ""}.`}
+        </p>
+      )}
+      {done && <p className="text-sm text-success">{done} Remove it from a PC without one: open the PC → the item → Retire.</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
+      {preview && preview.created > 0 && (
+        <button type="button" className="btn btn-primary btn-sm self-start" disabled={pending} onClick={() => void add()}>
+          Add {preview.created} {type?.name}
+          {preview.created === 1 ? "" : "s"}
+        </button>
+      )}
+    </div>
   );
 }
