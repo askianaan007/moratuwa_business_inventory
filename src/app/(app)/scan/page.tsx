@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BarcodeIcon, ChevronRightIcon } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
+import { QrScanButton } from "./qr-scanner";
 import { ScanForm } from "./scan-form";
 
 export const metadata: Metadata = { title: "Scan" };
@@ -9,8 +10,12 @@ export const metadata: Metadata = { title: "Scan" };
 export default function ScanPage() {
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <PageHeader title="Find an item" subtitle="Enter the tag code printed on the QR label" />
-      <ScanForm />
+      <PageHeader title="Find an item" subtitle="Scan the QR label, or type the tag code or a serial number" />
+      <div className="flex flex-col gap-3">
+        <QrScanButton />
+        <div className="divider my-0 text-xs text-base-content/50">or type it</div>
+        <ScanForm />
+      </div>
       <Link
         href="/serials"
         className="mt-4 flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-4 hover:bg-base-200/50 active:bg-base-200"
@@ -22,12 +27,6 @@ export default function ScanPage() {
         </span>
         <ChevronRightIcon className="size-5 opacity-50" />
       </Link>
-      <div className="mt-6 rounded-box border border-dashed border-base-300 bg-base-100 p-4 text-sm text-base-content/70">
-        <p className="font-semibold text-base-content">Camera scanning — coming next</p>
-        <p className="mt-1">
-          The QR camera scanner is planned for Phase 1, week 3. Until then, type the tag code or a serial number here.
-        </p>
-      </div>
     </div>
   );
 }

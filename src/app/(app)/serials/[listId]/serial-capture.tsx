@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type KeyboardEvent } from "react";
 import { BarcodeIcon, CameraIcon, DownloadIcon, FileIcon, PlusIcon, SearchIcon, SettingsIcon, XIcon } from "@/components/icons";
+import { beep } from "@/components/camera/detector";
+import { hasCamera } from "@/components/camera/use-camera";
 import { Sheet } from "@/components/sheet";
 import { PageHeader } from "@/components/ui";
 import { api } from "@/lib/api-client";
 import type { SerialListDetail, SerialUnit } from "@/lib/types";
 import { newId, useAction } from "@/lib/use-action";
-import { CameraScanner, hasCamera } from "./camera-scanner";
+import { CameraScanner } from "./camera-scanner";
 
 const KINDS = ["Monitor", "CPU", "Keyboard", "Mouse", "UPS", "Laptop", "Printer", "Projector"];
 const BRANDS = ["Dell", "HP", "Lenovo", "Acer", "Asus", "Samsung", "LG", "ViewSonic", "AOC", "Philips", "APC", "Logitech", "Epson", "Canon"];
@@ -33,24 +35,6 @@ function nextLabel(label: string | null | undefined) {
   if (!m) return "";
   const n = String(Number(m[2]) + 1).padStart(m[2]!.length, "0");
   return `${m[1]}${n}`;
-}
-
-/** Short confirmation tones, so the operator can keep their eyes on the equipment. */
-function beep(ok: boolean) {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = ok ? "sine" : "square";
-    osc.frequency.value = ok ? 880 : 220;
-    gain.gain.value = 0.06;
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + (ok ? 0.08 : 0.3));
-    osc.onended = () => void ctx.close();
-  } catch {
-    // No audio available: the on-screen message is enough.
-  }
 }
 
 const noopSubscribe = () => () => {};

@@ -6,6 +6,11 @@ import { SearchIcon } from "@/components/icons";
 
 const TAG_PATTERN = /^[A-Z0-9]+-[A-Z0-9]+-\d{4}-\d+$/;
 
+/** Tag codes open the item directly; anything else is searched in the ledger (serial no etc.). */
+export function destinationFor(code: string) {
+  return TAG_PATTERN.test(code) ? `/items/${encodeURIComponent(code)}` : `/ledger?q=${encodeURIComponent(code)}`;
+}
+
 export function ScanForm() {
   const router = useRouter();
 
@@ -15,15 +20,13 @@ export function ScanForm() {
       .trim()
       .toUpperCase();
     if (!code) return;
-    // Tag codes open the item directly; anything else is searched in the ledger (serial no etc.).
-    router.push(TAG_PATTERN.test(code) ? `/items/${encodeURIComponent(code)}` : `/ledger?q=${encodeURIComponent(code)}`);
+    router.push(destinationFor(code));
   }
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <input
         name="code"
-        autoFocus
         autoCapitalize="characters"
         autoComplete="off"
         spellCheck={false}
