@@ -21,9 +21,10 @@ export default function SerialListPage({ params }: PageProps<"/serials/[listId]"
 
 async function List({ params }: { params: Promise<{ listId: string }> }) {
   const { listId } = await params;
-  const [{ data: list }, { data: me }] = await Promise.all([
+  const [{ data: list }, { data: me }, { data: reader }] = await Promise.all([
     apiGet<{ data: SerialListDetail }>(`/serial-lists/${encodeURIComponent(listId)}`),
     apiGet<{ data: { user: User } }>("/auth/me"),
+    apiGet<{ data: { ai: boolean } }>("/label-reader"),
   ]);
-  return <SerialCapture list={list} canEdit={me.user.role !== "VIEWER"} />;
+  return <SerialCapture list={list} canEdit={me.user.role !== "VIEWER"} aiReader={reader.ai} />;
 }

@@ -55,7 +55,7 @@ function beep(ok: boolean) {
 
 const noopSubscribe = () => () => {};
 
-export function SerialCapture({ list, canEdit }: { list: SerialListDetail; canEdit: boolean }) {
+export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDetail; canEdit: boolean; aiReader: boolean }) {
   const router = useRouter();
   const pdf = `/api/v1/serial-lists/${list.id}/report.pdf`;
 
@@ -497,7 +497,12 @@ export function SerialCapture({ list, canEdit }: { list: SerialListDetail; canEd
       )}
 
       <Sheet open={camera !== null} onClose={() => setCamera(null)} title="Scan with camera" subtitle="Barcode, or read the printed serial">
-        <CameraScanner onCode={onCameraCode} />
+        <CameraScanner
+          onCode={onCameraCode}
+          ai={aiReader}
+          field={camera === "product" ? "product" : "serial"}
+          kind={parts.find((p) => p.key === camera)?.kind || undefined}
+        />
       </Sheet>
     </>
   );
