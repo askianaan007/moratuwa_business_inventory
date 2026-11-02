@@ -20,13 +20,13 @@ const PRESETS = [
   { label: "Single item", kinds: ["Monitor"] },
 ];
 
-type Part = { key: string; kind: string; serialNo: string; brand: string; model: string };
+type Part = { key: string; kind: string; serialNo: string; brand: string; model: string; productCode: string };
 
-const blankPart = (kind: string, brand = "", model = ""): Part => ({ key: newId(), kind, serialNo: "", brand, model });
+const blankPart = (kind: string, brand = "", model = "", productCode = ""): Part => ({ key: newId(), kind, serialNo: "", brand, model, productCode });
 
-/** Next unit takes the last one's parts (type, brand, model) with empty serials. */
+/** Next unit takes the last one's parts (type, brand, model, product code) with empty serials. */
 const templateFrom = (unit: SerialUnit | undefined): Part[] =>
-  unit ? unit.components.map((c) => blankPart(c.kind, c.brand ?? "", c.model ?? "")) : PRESETS[0]!.kinds.map((k) => blankPart(k));
+  unit ? unit.components.map((c) => blankPart(c.kind, c.brand ?? "", c.model ?? "", c.productCode ?? "")) : PRESETS[0]!.kinds.map((k) => blankPart(k));
 
 /** "PC 07" → "PC 08", keeping the zero padding. */
 function nextLabel(label: string | null | undefined) {
@@ -142,7 +142,8 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
     const body = {
       productNumber,
       label,
-      components: parts.map(({ kind, serialNo, brand, model }) => ({ kind, serialNo, brand, model })),
+      // The first part's product number is the unit's own; only the other parts keep an optional code.
+      components: parts.map(({ kind, serialNo, brand, model, productCode }, i) => ({ kind, serialNo, brand, model, productCode: i === 0 ? null : productCode })),
     };
     const saved = await run(() =>
       editing
@@ -166,7 +167,9 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
     setEditing(unit.id);
     setProductNumber(unit.productNumber);
     setLabel(unit.label ?? "");
-    setParts(unit.components.map((c) => ({ key: newId(), kind: c.kind, serialNo: c.serialNo, brand: c.brand ?? "", model: c.model ?? "" })));
+    setParts(
+      unit.components.map((c) => ({ key: newId(), kind: c.kind, serialNo: c.serialNo, brand: c.brand ?? "", model: c.model ?? "", productCode: c.productCode ?? "" })),
+    );
     setLocalErrors({});
     setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -203,7 +206,7 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
   const q = query.trim().toUpperCase();
   const visible = q
     ? units.filter((u) =>
-        [u.productNumber, u.label ?? "", ...u.components.flatMap((c) => [c.serialNo, c.brand ?? "", c.model ?? "", c.kind])].some((v) => v.toUpperCase().includes(q)),
+        [u.productNumber, u.label ?? "", ...u.components.flatMap((c) => [c.serialNo, c.brand ?? "", c.model ?? "", c.productCode ?? "", c.kind])].some((v) => v.toUpperCase().includes(q)),
       )
     : units;
 
@@ -263,6 +266,7 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
                 error={errorFor("productNumber")}
                 onCamera={cameraSupported ? () => setCamera("product") : undefined}
                 placeholder="Scan or type"
+                hint={`From the ${parts[0]?.kind || "first part"}'s label; identifies the whole set`}
               />
               <label className="flex min-w-0 flex-col gap-1">
                 <span className="text-sm font-medium">Label</span>
@@ -325,6 +329,18 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
                       className="input input-sm w-full"
                     />
                   </div>
+                  {i > 0 && (
+                    <input
+                      value={part.productCode}
+                      onChange={(e) => updatePart(part.key, { productCode: e.target.value })}
+                      aria-label={`${part.kind || `Part ${i + 1}`} product code`}
+                      placeholder={`${part.kind || "Part"} product code (optional)`}
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      className="input input-sm mt-2 w-full font-mono"
+                    />
+                  )}
                 </fieldset>
               ))}
             </div>
@@ -414,7 +430,10 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
                         <li key={c.id} className="flex gap-2">
                           <span className="w-20 shrink-0 text-base-content/60">{c.kind}</span>
                           <span className="min-w-0 flex-1 font-mono font-semibold break-all">{c.serialNo}</span>
-                          <span className="text-base-content/70">{[c.brand, c.model].filter(Boolean).join(" ")}</span>
+                          <span className="text-right text-base-content/70">
+                            {[c.brand, c.model].filter(Boolean).join(" ")}
+                            {c.productCode && <span className="block font-mono text-xs">Code {c.productCode}</span>}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -450,7 +469,10 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
                           )}
                           <td className="text-base-content/70">{c.kind}</td>
                           <td className="font-mono font-semibold">{c.serialNo}</td>
-                          <td>{[c.brand, c.model].filter(Boolean).join(" · ") || "—"}</td>
+                          <td>
+                            {[c.brand, c.model].filter(Boolean).join(" · ") || "—"}
+                            {c.productCode && <span className="block font-mono text-xs text-base-content/60">Product code {c.productCode}</span>}
+                          </td>
                           {canEdit && j === 0 && (
                             <td rowSpan={unit.components.length} className="align-top">
                               <UnitActions unit={unit} onEdit={() => startEdit(unit)} onRemove={() => removeUnit(unit)} />
@@ -500,6 +522,7 @@ function ScanField({
   onBlur,
   onCamera,
   error,
+  hint,
   placeholder,
   inputRef,
 }: {
@@ -510,6 +533,7 @@ function ScanField({
   onBlur?: () => void;
   onCamera?: () => void;
   error?: string;
+  hint?: string;
   placeholder?: string;
   inputRef: React.Ref<HTMLInputElement>;
 }) {
@@ -539,7 +563,7 @@ function ScanField({
           </button>
         )}
       </span>
-      {error && <span className="text-sm text-error">{error}</span>}
+      {error ? <span className="text-sm text-error">{error}</span> : hint && <span className="text-xs text-base-content/60">{hint}</span>}
     </label>
   );
 }

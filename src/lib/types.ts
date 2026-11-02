@@ -428,6 +428,8 @@ export interface SerialComponent {
   serialNo: string;
   brand: string | null;
   model: string | null;
+  /** Optional own code, e.g. a CPU's; the unit's product number (from the monitor) identifies the set. */
+  productCode: string | null;
   sortOrder: number;
 }
 
