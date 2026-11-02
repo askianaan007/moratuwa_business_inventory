@@ -116,6 +116,14 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
     if (productNumber.trim()) focusSerial(0);
   }
 
+  // Optional field, so it is not part of the scan chain; Enter in it moves on to the next serial, or saves.
+  function onCodeKey(e: KeyboardEvent<HTMLInputElement>, index: number) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (index < parts.length - 1) focusSerial(index + 1);
+    else void save();
+  }
+
   function onSerialKey(e: KeyboardEvent<HTMLInputElement>, index: number) {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -195,6 +203,13 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
     if (target === "product") {
       setProductNumber(code);
       requestAnimationFrame(() => focusSerial(0));
+      return;
+    }
+    if (target?.startsWith("code:")) {
+      const index = parts.findIndex((p) => `code:${p.key}` === target);
+      if (index < 0) return;
+      updatePart(parts[index]!.key, { productCode: code });
+      if (index < parts.length - 1) requestAnimationFrame(() => focusSerial(index + 1));
       return;
     }
     const index = parts.findIndex((p) => p.key === target);
@@ -330,16 +345,19 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
                     />
                   </div>
                   {i > 0 && (
-                    <input
-                      value={part.productCode}
-                      onChange={(e) => updatePart(part.key, { productCode: e.target.value })}
-                      aria-label={`${part.kind || `Part ${i + 1}`} product code`}
-                      placeholder={`${part.kind || "Part"} product code (optional)`}
-                      autoComplete="off"
-                      autoCapitalize="characters"
-                      spellCheck={false}
-                      className="input input-sm mt-2 w-full font-mono"
-                    />
+                    <div className="mt-2">
+                      <ScanField
+                        label={`${part.kind || "Part"} product code`}
+                        optional
+                        size="sm"
+                        value={part.productCode}
+                        onChange={(v) => updatePart(part.key, { productCode: v })}
+                        onKeyDown={(e) => onCodeKey(e, i)}
+                        error={errorFor(`components.${i}.productCode`)}
+                        onCamera={cameraSupported ? () => setCamera(`code:${part.key}`) : undefined}
+                        placeholder="Scan or type (optional)"
+                      />
+                    </div>
                   )}
                 </fieldset>
               ))}
@@ -506,8 +524,8 @@ export function SerialCapture({ list, canEdit, aiReader }: { list: SerialListDet
         <CameraScanner
           onCode={onCameraCode}
           ai={aiReader}
-          field={camera === "product" ? "product" : "serial"}
-          kind={parts.find((p) => p.key === camera)?.kind || undefined}
+          field={camera === "product" || camera?.startsWith("code:") ? "product" : "serial"}
+          kind={parts.find((p) => p.key === camera || `code:${p.key}` === camera)?.kind || undefined}
         />
       </Sheet>
     </>
@@ -525,6 +543,8 @@ function ScanField({
   hint,
   placeholder,
   inputRef,
+  optional = false,
+  size = "md",
 }: {
   label: string;
   value: string;
@@ -535,12 +555,14 @@ function ScanField({
   error?: string;
   hint?: string;
   placeholder?: string;
-  inputRef: React.Ref<HTMLInputElement>;
+  inputRef?: React.Ref<HTMLInputElement>;
+  optional?: boolean;
+  size?: "sm" | "md";
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-sm font-medium">
-        {label} <span className="text-error">*</span>
+      <span className={size === "sm" ? "text-xs font-medium text-base-content/70" : "text-sm font-medium"}>
+        {label} {optional ? <span className="font-normal text-base-content/50">(optional)</span> : <span className="text-error">*</span>}
       </span>
       <span className="flex gap-1">
         <input
@@ -555,10 +577,10 @@ function ScanField({
           autoCapitalize="characters"
           spellCheck={false}
           aria-invalid={Boolean(error)}
-          className={`input w-full font-mono ${error ? "input-error" : ""}`}
+          className={`input w-full font-mono ${size === "sm" ? "input-sm" : ""} ${error ? "input-error" : ""}`}
         />
         {onCamera && (
-          <button type="button" className="btn btn-square btn-outline border-base-300" onClick={onCamera} aria-label={`Scan ${label.toLowerCase()} with camera`}>
+          <button type="button" className={`btn btn-square btn-outline border-base-300 ${size === "sm" ? "btn-sm" : ""}`} onClick={onCamera} aria-label={`Scan ${label.toLowerCase()} with camera`}>
             <CameraIcon className="size-5" />
           </button>
         )}
