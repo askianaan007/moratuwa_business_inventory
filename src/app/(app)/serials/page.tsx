@@ -34,7 +34,13 @@ async function Lists() {
     <div className={`flex flex-col gap-3 ${canEdit ? "lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6" : ""}`}>
       {canEdit && (
         <div className="lg:sticky lg:top-8 lg:order-last">
-          <NewSerialList departments={departments} />
+          <NewSerialList
+            departments={departments}
+            checkedBy={{
+              name: lists.find((l) => l.checkedByName)?.checkedByName ?? null,
+              designation: lists.find((l) => l.checkedByName)?.checkedByDesignation ?? null,
+            }}
+          />
         </div>
       )}
 

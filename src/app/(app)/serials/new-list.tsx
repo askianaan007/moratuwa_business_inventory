@@ -7,8 +7,14 @@ import { api } from "@/lib/api-client";
 import type { Department, SerialListSummary } from "@/lib/types";
 import { useAction } from "@/lib/use-action";
 
-/** Creates a list and opens it, ready to scan. */
-export function NewSerialList({ departments }: { departments: Department[] }) {
+/** Creates a list and opens it, ready to scan. `checkedBy` prefills the "Checked by" signature from the most recent list. */
+export function NewSerialList({
+  departments,
+  checkedBy,
+}: {
+  departments: Department[];
+  checkedBy: { name: string | null; designation: string | null };
+}) {
   const router = useRouter();
   const { pending, error, fieldErrors, run } = useAction();
 
@@ -22,6 +28,8 @@ export function NewSerialList({ departments }: { departments: Department[] }) {
           title: form.get("title"),
           location: form.get("location"),
           notes: form.get("notes"),
+          checkedByName: form.get("checkedByName"),
+          checkedByDesignation: form.get("checkedByDesignation"),
           ...(departments.length && { departmentId: form.get("departmentId") || undefined }),
         },
       }),
@@ -67,6 +75,16 @@ export function NewSerialList({ departments }: { departments: Department[] }) {
         <span className="text-sm font-medium">Notes</span>
         <textarea name="notes" rows={2} className="textarea w-full" placeholder="Shown on the PDF" />
       </label>
+      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="text-sm font-medium">Checked by</span>
+          <input name="checkedByName" defaultValue={checkedBy.name ?? ""} placeholder="Name" className="input w-full" />
+        </label>
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="text-sm font-medium">Designation</span>
+          <input name="checkedByDesignation" defaultValue={checkedBy.designation ?? ""} placeholder="e.g. Technical Officer" className="input w-full" />
+        </label>
+      </div>
       <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? <span className="loading loading-spinner" /> : <PlusIcon className="size-5" />}
         Create and start scanning

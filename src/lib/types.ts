@@ -448,6 +448,8 @@ export interface SerialListSummary {
   title: string;
   location: string | null;
   notes: string | null;
+  checkedByName: string | null;
+  checkedByDesignation: string | null;
   units: number;
   parts: number;
   createdBy: { name: string } | null;

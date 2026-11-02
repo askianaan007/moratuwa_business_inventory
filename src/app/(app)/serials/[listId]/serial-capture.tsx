@@ -639,7 +639,14 @@ function ListDetails({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const saved = await run(() =>
-      api(`/serial-lists/${list.id}`, { method: "PATCH", body: { title: form.get("title"), location: form.get("location"), notes: form.get("notes") } }),
+      api(`/serial-lists/${list.id}`, { method: "PATCH", body: {
+          title: form.get("title"),
+          location: form.get("location"),
+          notes: form.get("notes"),
+          checkedByName: form.get("checkedByName"),
+          checkedByDesignation: form.get("checkedByDesignation"),
+        },
+      }),
     );
     if (saved) onSaved();
   }
@@ -673,6 +680,18 @@ function ListDetails({
           <span className="text-sm font-medium">Notes</span>
           <textarea name="notes" defaultValue={list.notes ?? ""} rows={3} className="textarea w-full" />
         </label>
+          <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-sm font-medium">Checked by</span>
+              <input name="checkedByName" defaultValue={list.checkedByName ?? ""} placeholder="Name" className="input w-full" />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-sm font-medium">Designation</span>
+              <input name="checkedByDesignation" defaultValue={list.checkedByDesignation ?? ""} placeholder="e.g. Technical Officer" className="input w-full" />
+            </label>
+          </div>
+
+        <p className="-mt-1 text-xs text-base-content/60">Printed on the PDF’s “Checked by” signature line.</p>
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending && <span className="loading loading-spinner" />}
           Save
