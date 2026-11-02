@@ -32,11 +32,8 @@ type Filter = "all" | "todo" | "faults";
 const FAULTS = new Set<LabCheckStatus>(["NOT_WORKING", "NEEDS_REPAIR", "MISSING"]);
 const MONITOR = "MON";
 const GONE_WITHOUT_MONITOR = new Set(["CPU", "KBD", "MSE"]);
-// The card and row shortcuts leave the UPS alone; "All working · next" inside
-// a PC includes it, since the auditor is looking at that PC's items.
-const SKIP_ALL_WORKING = new Set(["UPS"]);
-const workable = (c: LabCheck) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart;
-const quickWorkable = (c: LabCheck) => workable(c) && !SKIP_ALL_WORKING.has(c.typeCode);
+// What the "all working" shortcuts tick: every unchecked item, UPS included.
+const quickWorkable = (c: LabCheck) => c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart;
 const canMonitorOnly = (checks: LabCheck[]) =>
   checks.some((c) => c.typeCode === MONITOR && c.status === "NOT_CHECKED" && !c.targetRetiredAfterStart);
 const AUDITORS = new Set(["ADMIN", "HOD", "TECHNICAL_OFFICER"]);
@@ -136,8 +133,8 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
   }, [checks]);
 
   const markWorking = useCallback(
-    (list: LabCheck[], includeUps = false) => {
-      for (const c of list) if (includeUps ? workable(c) : quickWorkable(c)) record(c.id, { status: "WORKING" });
+    (list: LabCheck[]) => {
+      for (const c of list) if (quickWorkable(c)) record(c.id, { status: "WORKING" });
     },
     [record],
   );
@@ -322,12 +319,12 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
               <button type="button" className="btn btn-ghost btn-sm" disabled={index <= 0} onClick={() => go(-1)} aria-label="Previous">
                 ← Prev
               </button>
-              {editable && current.checks.some(workable) ? (
+              {editable && current.checks.some(quickWorkable) ? (
                 <button
                   type="button"
                   className="btn btn-success flex-1"
                   onClick={() => {
-                    markWorking(current.checks, true);
+                    markWorking(current.checks);
                     if (index >= 0 && index < order.length - 1) go(1);
                   }}
                 >
@@ -376,7 +373,7 @@ function StationCard({
   const status = statusOf(station);
   const meta = checkStatus[status];
   const done = station.checks.filter((c) => c.status !== "NOT_CHECKED").length;
-  // Quick tick: marks every unchecked item on this PC (except the UPS) working without opening it.
+  // Quick tick: marks every unchecked item on this PC working without opening it.
   const canTick = onAllWorking && station.checks.some(quickWorkable);
   const canMonOnly = onMonitorOnly && canMonitorOnly(station.checks);
   return (
@@ -420,7 +417,7 @@ function StationCard({
             </button>
           )}
           {canTick && (
-            <button type="button" onClick={onAllWorking} className="btn btn-success btn-xs" aria-label={`Mark all items on ${station.label} working`} title="All working (UPS left unchecked)">
+            <button type="button" onClick={onAllWorking} className="btn btn-success btn-xs" aria-label={`Mark all items on ${station.label} working`} title="All working">
               ✓ All
             </button>
           )}

@@ -5,12 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { navTabs } from "./bottom-dock";
-import { GridIcon, PlusIcon, SearchIcon, SettingsIcon } from "./icons";
+import { BarcodeIcon, GridIcon, PlusIcon, SearchIcon, SettingsIcon } from "./icons";
 
 type NavTab = { href: string; label: string; Icon: (p: { className?: string }) => React.ReactNode };
 
 const groups: { label: string; tabs: readonly NavTab[] }[] = [
-  { label: "Workspace", tabs: navTabs },
+  { label: "Workspace", tabs: [...navTabs, { href: "/serials", label: "Serial capture", Icon: BarcodeIcon }] },
   {
     label: "Manage",
     tabs: [

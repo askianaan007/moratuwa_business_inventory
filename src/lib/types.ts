@@ -419,3 +419,41 @@ export interface ReportSettings {
   footerNote: string | null;
   version: number | null;
 }
+
+// ─── Serial number capture ──────────────────────────────────────────────
+
+export interface SerialComponent {
+  id: string;
+  kind: string;
+  serialNo: string;
+  brand: string | null;
+  model: string | null;
+  sortOrder: number;
+}
+
+export interface SerialUnit {
+  id: string;
+  productNumber: string;
+  label: string | null;
+  sortOrder: number;
+  components: SerialComponent[];
+  createdAt: string;
+}
+
+export interface SerialListSummary {
+  id: string;
+  departmentId: string;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  units: number;
+  parts: number;
+  createdBy: { name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SerialListDetail extends Omit<SerialListSummary, "units" | "parts"> {
+  department: { id: string; code: string; name: string };
+  units: SerialUnit[];
+}
