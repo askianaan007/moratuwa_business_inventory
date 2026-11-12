@@ -47,9 +47,14 @@ async function ItemDetail({ params }: { params: Promise<{ tag: string }> }) {
             <Field label="Received">{formatDate(entry.entryDate)}</Field>
             <Field label="Receipt No">{entry.receiptNo ?? entry.refNo}</Field>
           </dl>
-          <Link href={`/ledger/${entry.id}`} className="btn btn-outline btn-sm mt-3 w-full">
-            Open ledger entry
-          </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link href={`/inventory/assets/${item.id}`} className="btn btn-primary btn-sm">
+              Manage asset
+            </Link>
+            <Link href={`/ledger/${entry.id}`} className="btn btn-outline btn-sm">
+              Ledger entry
+            </Link>
+          </div>
         </section>
 
         <section className="lg:rounded-box lg:border lg:border-base-300 lg:bg-base-100 lg:p-5">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { roleLabel } from "@/lib/format";
 import type { User } from "@/lib/types";
-import { BookIcon, LogoutIcon, SettingsIcon } from "./icons";
+import { BookIcon, FileIcon, LogoutIcon, SettingsIcon } from "./icons";
 
 /** Account menu. `expanded` is the sidebar variant: name and role beside the avatar, opening upwards. */
 export function UserMenu({ user, expanded = false }: { user: User; expanded?: boolean }) {
@@ -50,6 +50,12 @@ export function UserMenu({ user, expanded = false }: { user: User; expanded?: bo
           </p>
         </div>
         <ul className="menu w-full p-0">
+          <li className="lg:hidden">
+            <Link href="/reports">
+              <FileIcon className="size-5" />
+              Reports
+            </Link>
+          </li>
           <li>
             <Link href="/categories">
               <BookIcon className="size-5" />

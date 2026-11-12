@@ -105,7 +105,7 @@ export function LayoutEditor({ detail }: { detail: RoomDetail }) {
   const router = useRouter();
   const { room, openAudit } = detail;
   const [blocks, setBlocks] = useState<DraftBlock[]>(() => fromDetail(detail));
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [lastPreview, setPreview] = useState<Preview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [dirty, setDirty] = useState(false);
@@ -113,13 +113,11 @@ export function LayoutEditor({ detail }: { detail: RoomDetail }) {
   const body = useMemo(() => JSON.stringify(toInput(blocks)), [blocks]);
   const mirrored = useMemo(() => mirroredBlocks(blocks), [blocks]);
   const lastSent = useRef("");
+  const preview = blocks.length ? lastPreview : null;
 
   // Debounced preview. Ignores stale responses.
   useEffect(() => {
-    if (blocks.length === 0) {
-      setPreview(null);
-      return;
-    }
+    if (blocks.length === 0) return;
     const timer = setTimeout(async () => {
       lastSent.current = body;
       setPreviewing(true);

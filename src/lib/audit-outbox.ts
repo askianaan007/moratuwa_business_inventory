@@ -87,7 +87,7 @@ export function useAuditOutbox(auditId: string, initial: LabCheck[], editable: b
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const takeSnap = () => ({ server: new Map(server.current), local: new Map([...inflight.current, ...queue.current]) });
-  const [snap, setSnap] = useState(takeSnap);
+  const [snap, setSnap] = useState(() => ({ server: new Map(initial.map((c) => [c.id, c])), local: new Map<string, Change>() }));
   const [state, setState] = useState<SaveState>("saved");
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -96,7 +96,6 @@ export function useAuditOutbox(auditId: string, initial: LabCheck[], editable: b
   const changed = useCallback(() => {
     writeStored(auditId, [...new Map([...inflight.current, ...queue.current]).values()]);
     setSnap(takeSnap());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditId]);
 
   const mergeServer = useCallback(
@@ -109,12 +108,11 @@ export function useAuditOutbox(auditId: string, initial: LabCheck[], editable: b
       }
       setSnap(takeSnap());
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   // A server re-render (router.refresh) brings fresh rows: keep the newer copy.
-  useEffect(() => mergeServer(initial), [initial, mergeServer]);
+  useEffect(() => queueMicrotask(() => mergeServer(initial)), [initial, mergeServer]);
 
   const send = useCallback(async () => {
     if (!editable || lockedMessage || !queue.current.size) return;
@@ -198,11 +196,14 @@ export function useAuditOutbox(auditId: string, initial: LabCheck[], editable: b
 
   const schedule = useCallback(
     (delay = DEBOUNCE_MS) => {
-      clearTimeout(timer.current);
-      timer.current = setTimeout(async () => {
-        await flushOnce();
-        if (queue.current.size) schedule(Math.max(DEBOUNCE_MS, retryDelay.current));
-      }, delay);
+      const tick = (wait: number) => {
+        clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+          await flushOnce();
+          if (queue.current.size) tick(Math.max(DEBOUNCE_MS, retryDelay.current)); // keep retrying with backoff
+        }, wait);
+      };
+      tick(delay);
     },
     [flushOnce],
   );
@@ -215,9 +216,11 @@ export function useAuditOutbox(auditId: string, initial: LabCheck[], editable: b
       sentIds.current.add(c.mutationId);
       if (!queue.current.has(c.checkId)) queue.current.set(c.checkId, c);
     }
-    setState("pending");
-    changed();
-    schedule(200);
+    queueMicrotask(() => {
+      setState("pending");
+      changed();
+      schedule(200);
+    });
   }, [auditId, changed, schedule]);
 
   useEffect(() => {

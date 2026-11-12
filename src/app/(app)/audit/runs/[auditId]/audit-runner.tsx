@@ -99,19 +99,20 @@ export function AuditRunner({ audit, user, reasons, types }: { audit: LabAuditDe
   const current = open ? allStations.find((s) => s.key === open) : undefined;
   const index = current ? order.findIndex((s) => s.key === current.key) : -1;
 
-  const reasonsFor = useMemo(() => {
+  // Reason chips per item type: type-specific first, then the general ones.
+  const reasonsByType = useMemo(() => {
     const typeId = new Map(types.map((t) => [t.code, t.id]));
-    const cache = new Map<string, FaultReason[]>();
-    return (typeCode: string) => {
-      let list = cache.get(typeCode);
-      if (!list) {
-        const id = typeId.get(typeCode);
-        list = reasons.filter((r) => r.isActive && (r.typeId === null || r.typeId === id)).sort((a, b) => Number(a.typeId === null) - Number(b.typeId === null) || a.sortOrder - b.sortOrder);
-        cache.set(typeCode, list);
-      }
-      return list;
-    };
-  }, [reasons, types]);
+    const out = new Map<string, FaultReason[]>();
+    for (const code of new Set(audit.checks.map((c) => c.typeCode))) {
+      const id = typeId.get(code);
+      out.set(
+        code,
+        reasons.filter((r) => r.isActive && (r.typeId === null || r.typeId === id)).sort((a, b) => Number(a.typeId === null) - Number(b.typeId === null) || a.sortOrder - b.sortOrder),
+      );
+    }
+    return out;
+  }, [audit.checks, reasons, types]);
+  const reasonsFor = (typeCode: string) => reasonsByType.get(typeCode) ?? [];
 
   const progress = useMemo(() => {
     const byStatus = Object.fromEntries(Object.keys(checkStatus).map((s) => [s, 0])) as Record<LabCheckStatus, number>;

@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookIcon, ClipboardIcon, FileIcon, HomeIcon, ScanIcon } from "./icons";
+import { BookIcon, BoxIcon, ClipboardIcon, FileIcon, HomeIcon, ScanIcon } from "./icons";
 
-/** Main sections, shared with the desktop sidebar. */
+/**
+ * Main sections, shared with the desktop sidebar. The phone dock has room for
+ * five, so Reports is sidebar-only there (it is also on the home screen and in
+ * the account menu).
+ */
 export const navTabs = [
   { href: "/", label: "Home", Icon: HomeIcon },
-  { href: "/ledger", label: "Ledger", Icon: BookIcon },
+  { href: "/inventory", label: "Inventory", Icon: BoxIcon },
   { href: "/scan", label: "Scan", Icon: ScanIcon, primary: true },
+  { href: "/ledger", label: "Ledger", Icon: BookIcon },
   { href: "/audit", label: "Audit", Icon: ClipboardIcon },
-  { href: "/reports", label: "Reports", Icon: FileIcon },
+  { href: "/reports", label: "Reports", Icon: FileIcon, dock: false },
 ];
 
 /** Thumb-reachable main navigation, fixed to the bottom of the screen. Replaced by the sidebar on desktop. */
@@ -31,7 +36,7 @@ export function DockLinks({ pathname }: { pathname: string | null }) {
       aria-label="Main"
       className="dock dock-lg z-40 lg:hidden border-t border-base-300 bg-base-100 pb-[env(safe-area-inset-bottom)]"
     >
-      {navTabs.map(({ href, label, Icon, primary }) =>
+      {navTabs.filter((t) => t.dock !== false).map(({ href, label, Icon, primary }) =>
         primary ? (
           <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined}>
             <span className="-mt-7 flex size-14 items-center justify-center rounded-full bg-primary text-primary-content shadow-lg ring-4 ring-base-100">

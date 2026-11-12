@@ -131,3 +131,30 @@ export const CameraIcon = (p: IconProps) => (
     <circle cx="12" cy="13" r="3.5" />
   </Icon>
 );
+export const BoxIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 8 12 3 3 8v8l9 5 9-5z" />
+    <path d="m3 8 9 5 9-5M12 13v8" />
+  </Icon>
+);
+export const ArrowsIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 8h13l-3-3M20 16H7l3 3" />
+  </Icon>
+);
+export const PrinterIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2" />
+    <path d="M6 14h12v7H6z" />
+  </Icon>
+);
+export const AlertIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3 2 20h20zM12 10v4M12 17.5v.01" />
+  </Icon>
+);
+export const PencilIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
+  </Icon>
+);
